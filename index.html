@@ -34,6 +34,127 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- SheetJS (untuk export rekap absensi ke .xlsx asli, bukan CSV) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        /* Tombol kotak kecil bergaya ikon aplikasi (sisa util, dipakai di tempat lain jika perlu) */
+        .feature-tile-icon {
+            width: 1.75rem;
+            height: 1.75rem;
+        }
+        .feature-tile-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            line-height: 1;
+        }
+        @keyframes tile-spin {
+            to { transform: rotate(360deg); }
+        }
+        .feature-tile-icon.is-spinning {
+            animation: tile-spin 0.6s linear infinite;
+        }
+
+        /* ============ HALAMAN FITUR (feature-page) ============
+           Menutupi seluruh layar seperti "pindah halaman", terpisah dari dashboard di belakangnya. */
+        .feature-page {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: #f8fafc; /* slate-50 */
+            overflow-y: auto;
+            animation: feature-page-in 220ms ease-out;
+        }
+        .feature-page.hidden { display: none; }
+        @keyframes feature-page-in {
+            from { opacity: 0; transform: translateY(14px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .feature-page-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 1rem;
+            background: rgba(248, 250, 252, 0.92);
+            backdrop-filter: blur(6px);
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .feature-back-btn {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 9999px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            transition: transform 150ms ease, background-color 150ms ease;
+            flex-shrink: 0;
+        }
+        .feature-back-btn:hover { background: #f1f5f9; }
+        .feature-back-btn:active { transform: scale(0.88); }
+        .feature-page-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+        .feature-page-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .feature-page-body {
+            padding: 1rem;
+        }
+        @media (min-width: 768px) {
+            .feature-page-body { padding: 2rem; }
+        }
+
+        /* ============ BUBBLE MELAYANG (draggable, seperti chat head) ============ */
+        #feature-bubble {
+            position: fixed;
+            z-index: 40;
+            width: 3.75rem;
+            height: 3.75rem;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            border: none;
+            box-shadow: 0 10px 25px -6px rgba(2, 132, 199, 0.5), 0 4px 10px -2px rgba(0,0,0,0.15);
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+            transition: transform 150ms ease, box-shadow 150ms ease;
+        }
+        #feature-bubble.hidden { display: none; }
+        #feature-bubble:active {
+            cursor: grabbing;
+        }
+        #feature-bubble.is-dragging {
+            transform: scale(1.08);
+            box-shadow: 0 14px 30px -6px rgba(2, 132, 199, 0.6), 0 6px 14px -2px rgba(0,0,0,0.2);
+            transition: none;
+        }
+        #feature-bubble.is-tapped {
+            transform: scale(0.85);
+        }
+        #feature-bubble-icon {
+            width: 1.6rem;
+            height: 1.6rem;
+        }
+        #feature-bubble-icon.is-spinning {
+            animation: tile-spin 0.6s linear infinite;
+        }
+    </style>
 </head>
 <body class="h-full text-slate-800 font-sans flex flex-col justify-between">
 
@@ -300,348 +421,6 @@
                     </div>
                 </div>
 
-                <!-- 2. SEKRETARIS PANEL -->
-                <div id="panel-sekretaris" class="hidden space-y-4">
-
-                    <!-- Toolbar: Pilih Tanggal Absen -->
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <div class="flex items-center gap-2 w-full sm:w-auto">
-                            <span class="text-xs font-semibold text-slate-500 shrink-0">Tanggal Absen:</span>
-                            <input type="date" id="sekr-tanggal" onchange="loadSekretarisPanel()" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500">
-                        </div>
-                        <div class="text-[11px] text-slate-400 font-medium italic flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-100 w-full sm:w-auto justify-center">
-                            <i data-lucide="info" class="w-3.5 h-3.5 text-primary-500"></i> Klik salah satu huruf (H/I/S/D/A) untuk mengabsen, langsung tersimpan.
-                        </div>
-                    </div>
-
-                    <!-- Quick-Tap Attendance Table -->
-                    <div class="border border-slate-100 rounded-xl overflow-hidden">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
-                                    <th class="p-3">Nama Siswa</th>
-                                    <th class="p-3 text-center">H / I / S / D / A</th>
-                                    <th class="p-3">Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sekr-absen-table-body" class="divide-y divide-slate-100">
-                                <!-- Dynamic rows, 1 per siswa -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Rekap Bulanan & Download -->
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100 mt-2">
-                        <div class="flex items-center gap-2 w-full sm:w-auto">
-                            <span class="text-xs font-semibold text-slate-500 shrink-0">Rekap Bulan:</span>
-                            <input type="month" id="rekap-bulan" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500">
-                        </div>
-                        <button onclick="downloadRekapAbsensi()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 shadow">
-                            <i data-lucide="download" class="w-4 h-4"></i> Download Rekap (Excel)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 3. BENDAHARA TABUNGAN VILLA PANEL -->
-                <div id="panel-bendahara-villa" class="hidden space-y-4">
-                    <form id="form-villa" onsubmit="submitVilla(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
-                            <select id="villa-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
-                                <option value="" disabled selected>Pilih Siswa...</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
-                            <input type="number" id="villa-nominal" min="5000" step="500" placeholder="10000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
-                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
-                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
-                                    <input type="radio" name="villa-jenis" value="setor" checked required class="sr-only"> Setor
-                                </label>
-                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
-                                    <input type="radio" name="villa-jenis" value="tarik" class="sr-only"> Tarik
-                                </label>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <div class="flex-grow">
-                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
-                                <input type="text" id="villa-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
-                            </div>
-                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
-                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Total Tabungan Villa per Siswa -->
-                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
-                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
-                            <i data-lucide="list-ordered" class="w-4 h-4 text-amber-600"></i> Total Tabungan Villa Setiap Siswa
-                        </h4>
-                        <div id="villa-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-                            <!-- Dynamic -->
-                        </div>
-                    </div>
-
-                    <!-- Villa Recent Transactions list -->
-                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
-                                    <th class="p-3">Nama Siswa</th>
-                                    <th class="p-3">Waktu Transaksi</th>
-                                    <th class="p-3 text-center">Jenis</th>
-                                    <th class="p-3 text-right">Jumlah Uang</th>
-                                    <th class="p-3">Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody id="villa-table-body" class="divide-y divide-slate-100">
-                                <!-- Dynamic rows -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Rekap Bulanan & Download -->
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100 mt-2">
-                        <div class="flex items-center gap-2 w-full sm:w-auto">
-                            <span class="text-xs font-semibold text-slate-500 shrink-0">Rekap Bulan:</span>
-                            <input type="month" id="rekap-villa-bulan" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500">
-                        </div>
-                        <button onclick="downloadRekapVilla()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 shadow">
-                            <i data-lucide="download" class="w-4 h-4"></i> Download Rekap (Excel)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 4. BENDAHARA TABUNGAN PANEL -->
-                <div id="panel-bendahara-tabungan" class="hidden space-y-4">
-                    <form id="form-tabungan" onsubmit="submitTabungan(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
-                            <select id="tab-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
-                                <option value="" disabled selected>Pilih Siswa...</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
-                            <input type="number" id="tab-nominal" min="5000" step="500" placeholder="10000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
-                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
-                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
-                                    <input type="radio" name="tab-jenis" value="setor" checked required class="sr-only"> Setor
-                                </label>
-                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
-                                    <input type="radio" name="tab-jenis" value="tarik" class="sr-only"> Tarik
-                                </label>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <div class="flex-grow">
-                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
-                                <input type="text" id="tab-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
-                            </div>
-                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
-                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Total Tabungan per Siswa -->
-                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
-                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
-                            <i data-lucide="list-ordered" class="w-4 h-4 text-sky-600"></i> Total Tabungan Setiap Siswa
-                        </h4>
-                        <div id="tab-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-                            <!-- Dynamic -->
-                        </div>
-                    </div>
-
-                    <!-- Tabungan Recent Transactions list -->
-                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
-                                    <th class="p-3">Nama Siswa</th>
-                                    <th class="p-3">Waktu Transaksi</th>
-                                    <th class="p-3 text-center">Jenis</th>
-                                    <th class="p-3 text-right">Jumlah Uang</th>
-                                    <th class="p-3">Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tab-table-body" class="divide-y divide-slate-100">
-                                <!-- Dynamic rows -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Rekap Bulanan & Download -->
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100 mt-2">
-                        <div class="flex items-center gap-2 w-full sm:w-auto">
-                            <span class="text-xs font-semibold text-slate-500 shrink-0">Rekap Bulan:</span>
-                            <input type="month" id="rekap-tabungan-bulan" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500">
-                        </div>
-                        <button onclick="downloadRekapTabungan()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 shadow">
-                            <i data-lucide="download" class="w-4 h-4"></i> Download Rekap (Excel)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 5. BENDAHARA TABUNGAN YEARBOOK PANEL -->
-                <div id="panel-bendahara-yearbook" class="hidden space-y-4">
-                    <form id="form-yearbook" onsubmit="submitYearbook(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
-                            <select id="yearbook-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
-                                <option value="" disabled selected>Pilih Siswa...</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
-                            <input type="number" id="yearbook-nominal" min="500" step="500" placeholder="10000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
-                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
-                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
-                                    <input type="radio" name="yearbook-jenis" value="setor" checked required class="sr-only"> Setor
-                                </label>
-                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
-                                    <input type="radio" name="yearbook-jenis" value="tarik" class="sr-only"> Tarik
-                                </label>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <div class="flex-grow">
-                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
-                                <input type="text" id="yearbook-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
-                            </div>
-                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
-                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Total Tabungan Yearbook per Siswa -->
-                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
-                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
-                            <i data-lucide="list-ordered" class="w-4 h-4 text-purple-600"></i> Total Tabungan Yearbook Setiap Siswa
-                        </h4>
-                        <div id="yearbook-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-                            <!-- Dynamic -->
-                        </div>
-                    </div>
-
-                    <!-- Yearbook Recent Transactions list -->
-                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
-                                    <th class="p-3">Nama Siswa</th>
-                                    <th class="p-3">Waktu Transaksi</th>
-                                    <th class="p-3 text-center">Jenis</th>
-                                    <th class="p-3 text-right">Jumlah Uang</th>
-                                    <th class="p-3">Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody id="yearbook-table-body" class="divide-y divide-slate-100">
-                                <!-- Dynamic rows -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Rekap Bulanan & Download -->
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100 mt-2">
-                        <div class="flex items-center gap-2 w-full sm:w-auto">
-                            <span class="text-xs font-semibold text-slate-500 shrink-0">Rekap Bulan:</span>
-                            <input type="month" id="rekap-yearbook-bulan" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500">
-                        </div>
-                        <button onclick="downloadRekapYearbook()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 shadow">
-                            <i data-lucide="download" class="w-4 h-4"></i> Download Rekap (Excel)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 6. BENDAHARA TABUNGAN KAS PANEL -->
-                <div id="panel-bendahara-kas" class="hidden space-y-4">
-                    <form id="form-kas" onsubmit="submitKas(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
-                            <select id="kas-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
-                                <option value="" disabled selected>Pilih Siswa...</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
-                            <input type="number" id="kas-nominal" min="500" step="500" placeholder="5000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
-                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
-                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
-                                    <input type="radio" name="kas-jenis" value="setor" checked required class="sr-only"> Setor
-                                </label>
-                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
-                                    <input type="radio" name="kas-jenis" value="tarik" class="sr-only"> Tarik
-                                </label>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <div class="flex-grow">
-                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
-                                <input type="text" id="kas-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
-                            </div>
-                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
-                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Total Tabungan Kas per Siswa -->
-                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
-                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
-                            <i data-lucide="list-ordered" class="w-4 h-4 text-emerald-600"></i> Total Tabungan Kas Setiap Siswa
-                        </h4>
-                        <div id="kas-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-                            <!-- Dynamic -->
-                        </div>
-                    </div>
-
-                    <!-- Kas Recent Transactions list -->
-                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
-                                    <th class="p-3">Nama Siswa</th>
-                                    <th class="p-3">Waktu Transaksi</th>
-                                    <th class="p-3 text-center">Jenis</th>
-                                    <th class="p-3 text-right">Jumlah Uang</th>
-                                    <th class="p-3">Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody id="kas-table-body" class="divide-y divide-slate-100">
-                                <!-- Dynamic rows -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Rekap Bulanan & Download -->
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100 mt-2">
-                        <div class="flex items-center gap-2 w-full sm:w-auto">
-                            <span class="text-xs font-semibold text-slate-500 shrink-0">Rekap Bulan:</span>
-                            <input type="month" id="rekap-kas-bulan" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500">
-                        </div>
-                        <button onclick="downloadRekapKas()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 shadow">
-                            <i data-lucide="download" class="w-4 h-4"></i> Download Rekap (Excel)
-                        </button>
-                    </div>
-                </div>
-
                 <!-- 7. ADMIN: KELOLA SISWA PANEL -->
                 <h3 id="admin-label-siswa" class="admin-section-label hidden text-xs font-bold text-slate-400 uppercase tracking-wider mt-4 mb-1 flex items-center gap-1.5">
                     <i data-lucide="users-round" class="w-3.5 h-3.5"></i> Kelola Data Siswa
@@ -740,6 +519,432 @@
         </div>
 
     </main>
+
+    <!-- ==================== HALAMAN FITUR KHUSUS (SEKRETARIS & BENDAHARA) ====================
+         Ditampilkan sebagai "halaman" tersendiri yang menutupi layar (bukan inline di dashboard),
+         dibuka lewat bubble melayang di pojok, dan punya tombol Kembali di kiri atas. ==================== -->
+                <!-- PANEL SEKRETARIS (halaman penuh, dibuka dari bubble melayang) -->
+                <div id="panel-sekretaris" class="feature-page hidden">
+                    <div class="feature-page-header">
+                        <button onclick="tutupFitur('sekretaris')" class="feature-back-btn" aria-label="Kembali">
+                            <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                        </button>
+                        <div class="feature-page-title">
+                            <div class="feature-page-icon bg-primary-50 text-primary-600">
+                                <i data-lucide="clipboard-signature" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">Input Absensi Kelas</h3>
+                                <p class="text-[11px] text-slate-400 leading-tight">Sekretaris</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feature-page-body space-y-4">
+
+                    <!-- Toolbar: Pilih Tanggal Absen -->
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <span class="text-xs font-semibold text-slate-500 shrink-0">Tanggal Absen:</span>
+                            <input type="date" id="sekr-tanggal" onchange="loadSekretarisPanel()" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500">
+                        </div>
+                        <div class="text-[11px] text-slate-400 font-medium italic flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-100 w-full sm:w-auto justify-center">
+                            <i data-lucide="info" class="w-3.5 h-3.5 text-primary-500"></i> Klik salah satu huruf (H/I/S/D/A) untuk mengabsen, langsung tersimpan.
+                        </div>
+                    </div>
+
+                    <!-- Quick-Tap Attendance Table -->
+                    <div class="border border-slate-100 rounded-xl overflow-hidden">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3 text-center">H / I / S / D / A</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sekr-absen-table-body" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows, 1 per siswa -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Rekap Bulanan & Download -->
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100 mt-2">
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <span class="text-xs font-semibold text-slate-500 shrink-0">Rekap Bulan:</span>
+                            <input type="month" id="rekap-bulan" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500">
+                        </div>
+                        <button onclick="downloadRekapAbsensi()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 shadow">
+                            <i data-lucide="download" class="w-4 h-4"></i> Download Rekap (Excel)
+                        </button>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- PANEL VILLA (halaman penuh, dibuka dari bubble melayang) -->
+                <div id="panel-bendahara-villa" class="feature-page hidden">
+                    <div class="feature-page-header">
+                        <button onclick="tutupFitur('villa')" class="feature-back-btn" aria-label="Kembali">
+                            <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                        </button>
+                        <div class="feature-page-title">
+                            <div class="feature-page-icon bg-amber-50 text-amber-600">
+                                <i data-lucide="palmtree" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">Tabungan Villa</h3>
+                                <p class="text-[11px] text-slate-400 leading-tight">Bendahara Tabungan Villa</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feature-page-body space-y-4">
+
+                    <!-- Total Keseluruhan Tabungan Villa -->
+                    <div class="bg-gradient-to-r from-amber-50 to-white border border-amber-100 rounded-xl p-4 flex items-center gap-3">
+                        <div class="w-11 h-11 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i data-lucide="palmtree" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Keseluruhan Tabungan Villa Terkumpul</p>
+                            <h3 class="text-xl font-bold text-slate-800" id="villa-grand-total">Rp 0</h3>
+                        </div>
+                    </div>
+
+                    <form id="form-villa" onsubmit="submitVilla(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
+                            <select id="villa-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                <option value="" disabled selected>Pilih Siswa...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
+                            <input type="number" id="villa-nominal" min="5000" step="500" placeholder="10000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
+                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
+                                    <input type="radio" name="villa-jenis" value="setor" checked required class="sr-only"> Setor
+                                </label>
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                                    <input type="radio" name="villa-jenis" value="tarik" class="sr-only"> Tarik
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="flex-grow">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
+                                <input type="text" id="villa-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                            </div>
+                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Total Tabungan Villa per Siswa -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="list-ordered" class="w-4 h-4 text-amber-600"></i> Total Tabungan Villa Setiap Siswa
+                        </h4>
+                        <div id="villa-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- Villa Recent Transactions list -->
+                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3">Waktu Transaksi</th>
+                                    <th class="p-3 text-center">Jenis</th>
+                                    <th class="p-3 text-right">Jumlah Uang</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="villa-table-body" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- PANEL TABUNGAN (halaman penuh, dibuka dari bubble melayang) -->
+                <div id="panel-bendahara-tabungan" class="feature-page hidden">
+                    <div class="feature-page-header">
+                        <button onclick="tutupFitur('tabungan')" class="feature-back-btn" aria-label="Kembali">
+                            <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                        </button>
+                        <div class="feature-page-title">
+                            <div class="feature-page-icon bg-sky-50 text-sky-600">
+                                <i data-lucide="piggy-bank" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">Tabungan Siswa</h3>
+                                <p class="text-[11px] text-slate-400 leading-tight">Bendahara Tabungan</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feature-page-body space-y-4">
+
+                    <form id="form-tabungan" onsubmit="submitTabungan(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
+                            <select id="tab-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                <option value="" disabled selected>Pilih Siswa...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
+                            <input type="number" id="tab-nominal" min="5000" step="500" placeholder="10000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
+                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
+                                    <input type="radio" name="tab-jenis" value="setor" checked required class="sr-only"> Setor
+                                </label>
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                                    <input type="radio" name="tab-jenis" value="tarik" class="sr-only"> Tarik
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="flex-grow">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
+                                <input type="text" id="tab-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                            </div>
+                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Total Tabungan per Siswa -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="list-ordered" class="w-4 h-4 text-sky-600"></i> Total Tabungan Setiap Siswa
+                        </h4>
+                        <div id="tab-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- Tabungan Recent Transactions list -->
+                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3">Waktu Transaksi</th>
+                                    <th class="p-3 text-center">Jenis</th>
+                                    <th class="p-3 text-right">Jumlah Uang</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tab-table-body" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- PANEL YEARBOOK (halaman penuh, dibuka dari bubble melayang) -->
+                <div id="panel-bendahara-yearbook" class="feature-page hidden">
+                    <div class="feature-page-header">
+                        <button onclick="tutupFitur('yearbook')" class="feature-back-btn" aria-label="Kembali">
+                            <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                        </button>
+                        <div class="feature-page-title">
+                            <div class="feature-page-icon bg-purple-50 text-purple-600">
+                                <i data-lucide="book-image" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">Tabungan Yearbook</h3>
+                                <p class="text-[11px] text-slate-400 leading-tight">Bendahara Tabungan Yearbook</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feature-page-body space-y-4">
+
+                    <!-- Total Keseluruhan Tabungan Yearbook -->
+                    <div class="bg-gradient-to-r from-purple-50 to-white border border-purple-100 rounded-xl p-4 flex items-center gap-3">
+                        <div class="w-11 h-11 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i data-lucide="book-image" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Keseluruhan Tabungan Yearbook Terkumpul</p>
+                            <h3 class="text-xl font-bold text-slate-800" id="yearbook-grand-total">Rp 0</h3>
+                        </div>
+                    </div>
+
+                    <form id="form-yearbook" onsubmit="submitYearbook(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
+                            <select id="yearbook-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                <option value="" disabled selected>Pilih Siswa...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
+                            <input type="number" id="yearbook-nominal" min="500" step="500" placeholder="10000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
+                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
+                                    <input type="radio" name="yearbook-jenis" value="setor" checked required class="sr-only"> Setor
+                                </label>
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                                    <input type="radio" name="yearbook-jenis" value="tarik" class="sr-only"> Tarik
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="flex-grow">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
+                                <input type="text" id="yearbook-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                            </div>
+                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Total Tabungan Yearbook per Siswa -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="list-ordered" class="w-4 h-4 text-purple-600"></i> Total Tabungan Yearbook Setiap Siswa
+                        </h4>
+                        <div id="yearbook-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- Yearbook Recent Transactions list -->
+                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3">Waktu Transaksi</th>
+                                    <th class="p-3 text-center">Jenis</th>
+                                    <th class="p-3 text-right">Jumlah Uang</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="yearbook-table-body" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- PANEL KAS (halaman penuh, dibuka dari bubble melayang) -->
+                <div id="panel-bendahara-kas" class="feature-page hidden">
+                    <div class="feature-page-header">
+                        <button onclick="tutupFitur('kas')" class="feature-back-btn" aria-label="Kembali">
+                            <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                        </button>
+                        <div class="feature-page-title">
+                            <div class="feature-page-icon bg-emerald-50 text-emerald-600">
+                                <i data-lucide="wallet" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">Tabungan Kas</h3>
+                                <p class="text-[11px] text-slate-400 leading-tight">Bendahara Tabungan Kas</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feature-page-body space-y-4">
+
+                    <!-- Total Keseluruhan Tabungan Kas -->
+                    <div class="bg-gradient-to-r from-emerald-50 to-white border border-emerald-100 rounded-xl p-4 flex items-center gap-3">
+                        <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i data-lucide="wallet" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Keseluruhan Tabungan Kas Terkumpul</p>
+                            <h3 class="text-xl font-bold text-slate-800" id="kas-grand-total">Rp 0</h3>
+                        </div>
+                    </div>
+
+                    <form id="form-kas" onsubmit="submitKas(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
+                            <select id="kas-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                <option value="" disabled selected>Pilih Siswa...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
+                            <input type="number" id="kas-nominal" min="500" step="500" placeholder="5000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
+                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
+                                    <input type="radio" name="kas-jenis" value="setor" checked required class="sr-only"> Setor
+                                </label>
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                                    <input type="radio" name="kas-jenis" value="tarik" class="sr-only"> Tarik
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="flex-grow">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
+                                <input type="text" id="kas-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                            </div>
+                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Total Tabungan Kas per Siswa -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="list-ordered" class="w-4 h-4 text-emerald-600"></i> Total Tabungan Kas Setiap Siswa
+                        </h4>
+                        <div id="kas-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- Kas Recent Transactions list -->
+                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3">Waktu Transaksi</th>
+                                    <th class="p-3 text-center">Jenis</th>
+                                    <th class="p-3 text-right">Jumlah Uang</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kas-table-body" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+
+
+    <!-- ==================== BUBBLE MELAYANG (TOMBOL FITUR SESUAI ROLE) ====================
+         Bisa diseret/dipindah ke mana saja di layar, seperti chat head. Tap (tanpa menyeret)
+         untuk membuka halaman fitur sesuai role user yang sedang login. ==================== -->
+    <button id="feature-bubble" class="hidden" style="right: 20px; bottom: 96px;">
+        <i data-lucide="clipboard-signature" id="feature-bubble-icon"></i>
+    </button>
 
     <!-- FOOTER -->
     <footer class="bg-slate-900 border-t border-slate-800 py-6 text-center text-xs text-slate-500">
@@ -948,11 +1153,15 @@
         function handleLogout() {
             localStorage.removeItem('siswa_session');
             activeUser = null;
-            
+
             // Toggle view kembali ke login
             document.getElementById('login-card').classList.remove('hidden');
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('login-pin').value = '';
+
+            // Pastikan bubble melayang & halaman fitur ikut tertutup saat logout
+            hideAllRolePanels();
+            hideFeatureBubble();
         }
 
         function checkLocalSession() {
@@ -966,6 +1175,17 @@
         // ====================================================================
         // 4. VIEW RENDERING ENGINE (THEMING & RENDERING CARD)
         // ====================================================================
+        // Konfigurasi bubble fitur untuk tiap role sekretaris/bendahara.
+        // prefix -> dipakai untuk cari panel halaman (feature-page) & fungsi loadnya.
+        const FEATURE_ROLE_CONFIG = {
+            'sekretaris': { prefix: 'sekretaris', panelId: 'panel-sekretaris', icon: 'clipboard-signature', color: '#0284c7', loadFn: () => loadSekretarisPanel() },
+            'bendahara_tabungan_villa': { prefix: 'villa', panelId: 'panel-bendahara-villa', icon: 'palmtree', color: '#f59e0b', loadFn: () => loadBendaharaVillaPanel() },
+            'bendahara_tabungan': { prefix: 'tabungan', panelId: 'panel-bendahara-tabungan', icon: 'piggy-bank', color: '#0ea5e9', loadFn: () => loadBendaharaTabunganPanel() },
+            'bendahara_tabungan_yearbook': { prefix: 'yearbook', panelId: 'panel-bendahara-yearbook', icon: 'book-image', color: '#a855f7', loadFn: () => loadBendaharaYearbookPanel() },
+            'bendahara_tabungan_kas': { prefix: 'kas', panelId: 'panel-bendahara-kas', icon: 'wallet', color: '#10b981', loadFn: () => loadBendaharaKasPanel() },
+        };
+        let activeFeatureBubbleConfig = null; // config role yang sedang aktif untuk bubble
+
         async function showDashboard() {
             // Sembunyikan form login, tampilkan dashboard
             document.getElementById('login-card').classList.add('hidden');
@@ -986,14 +1206,14 @@
             const rolePanel = document.getElementById('role-panel');
             hideAllRolePanels();
 
-            if (activeUser.role !== 'anggota') {
+            if (activeUser.role === 'ketua' || activeUser.role === 'wakil ketua' || activeUser.role === 'admin') {
+                // Role ini tetap tampil inline di dashboard (bukan lewat bubble/halaman terpisah)
                 rolePanel.classList.remove('hidden');
-                
-                // Atur Judul Panel & Ikon
+                hideFeatureBubble();
+
                 const panelTitle = document.getElementById('role-panel-title');
                 const panelIcon = document.getElementById('role-panel-icon');
                 const panelBadge = document.getElementById('role-panel-badge');
-
                 panelBadge.innerText = activeUser.role.toUpperCase().replace(/_/g, ' ');
 
                 if (activeUser.role === 'ketua' || activeUser.role === 'wakil ketua') {
@@ -1002,63 +1222,12 @@
                     document.getElementById('panel-ketua').classList.remove('hidden');
                     await loadKetuaPanel();
                     await loadKetuaPengumumanList();
-                } 
-                else if (activeUser.role === 'sekretaris') {
-                    panelTitle.innerText = "Panel Input Absensi Kelas";
-                    panelIcon.setAttribute('data-lucide', 'clipboard-signature');
-                    document.getElementById('panel-sekretaris').classList.remove('hidden');
-                    const rekapBulanInput = document.getElementById('rekap-bulan');
-                    if (rekapBulanInput && !rekapBulanInput.value) {
-                        rekapBulanInput.value = new Date().toISOString().slice(0, 7); // "YYYY-MM"
-                    }
-                    await loadSekretarisPanel();
-                } 
-                else if (activeUser.role === 'bendahara_tabungan_villa') {
-                    panelTitle.innerText = "Panel Pencatatan Tabungan Villa";
-                    panelIcon.setAttribute('data-lucide', 'palmtree');
-                    document.getElementById('panel-bendahara-villa').classList.remove('hidden');
-                    const rekapVillaBulanInput = document.getElementById('rekap-villa-bulan');
-                    if (rekapVillaBulanInput && !rekapVillaBulanInput.value) {
-                        rekapVillaBulanInput.value = new Date().toISOString().slice(0, 7);
-                    }
-                    await loadBendaharaVillaPanel();
-                } 
-                else if (activeUser.role === 'bendahara_tabungan') {
-                    panelTitle.innerText = "Panel Pencatatan Tabungan Siswa";
-                    panelIcon.setAttribute('data-lucide', 'piggy-bank');
-                    document.getElementById('panel-bendahara-tabungan').classList.remove('hidden');
-                    const rekapTabunganBulanInput = document.getElementById('rekap-tabungan-bulan');
-                    if (rekapTabunganBulanInput && !rekapTabunganBulanInput.value) {
-                        rekapTabunganBulanInput.value = new Date().toISOString().slice(0, 7);
-                    }
-                    await loadBendaharaTabunganPanel();
-                }
-                else if (activeUser.role === 'bendahara_tabungan_yearbook') {
-                    panelTitle.innerText = "Panel Pencatatan Tabungan Yearbook";
-                    panelIcon.setAttribute('data-lucide', 'book-image');
-                    document.getElementById('panel-bendahara-yearbook').classList.remove('hidden');
-                    const rekapYearbookBulanInput = document.getElementById('rekap-yearbook-bulan');
-                    if (rekapYearbookBulanInput && !rekapYearbookBulanInput.value) {
-                        rekapYearbookBulanInput.value = new Date().toISOString().slice(0, 7);
-                    }
-                    await loadBendaharaYearbookPanel();
-                }
-                else if (activeUser.role === 'bendahara_tabungan_kas') {
-                    panelTitle.innerText = "Panel Pencatatan Tabungan Kas";
-                    panelIcon.setAttribute('data-lucide', 'wallet');
-                    document.getElementById('panel-bendahara-kas').classList.remove('hidden');
-                    const rekapKasBulanInput = document.getElementById('rekap-kas-bulan');
-                    if (rekapKasBulanInput && !rekapKasBulanInput.value) {
-                        rekapKasBulanInput.value = new Date().toISOString().slice(0, 7);
-                    }
-                    await loadBendaharaKasPanel();
-                }
-                else if (activeUser.role === 'admin') {
+                } else {
                     panelTitle.innerText = "Panel Admin";
                     panelIcon.setAttribute('data-lucide', 'crown');
 
                     // Admin hanya melihat panel Ketua (monitoring & pengumuman) + Kelola Siswa.
-                    // Absensi & tabungan sudah ada panelnya masing-masing untuk role terkait.
+                    // Absensi & tabungan sudah punya bubble & halaman fitur masing-masing.
                     document.getElementById('admin-label-ketua').classList.remove('hidden');
                     document.getElementById('admin-label-siswa').classList.remove('hidden');
                     document.getElementById('panel-ketua').classList.remove('hidden');
@@ -1068,23 +1237,171 @@
                     await loadKetuaPengumumanList();
                     await loadAdminSiswaPanel();
                 }
-            } else {
+            } else if (FEATURE_ROLE_CONFIG[activeUser.role]) {
+                // Sekretaris & bendahara: tidak ada panel inline, cukup bubble melayang
                 rolePanel.classList.add('hidden');
+                showFeatureBubbleForRole(activeUser.role);
+            } else {
+                // Anggota biasa
+                rolePanel.classList.add('hidden');
+                hideFeatureBubble();
             }
 
             lucide.createIcons();
         }
 
+        // Menampilkan bubble melayang sesuai role aktif (ikon & warna menyesuaikan)
+        function showFeatureBubbleForRole(role) {
+            const config = FEATURE_ROLE_CONFIG[role];
+            const bubble = document.getElementById('feature-bubble');
+            if (!config || !bubble) return;
+
+            activeFeatureBubbleConfig = config;
+            bubble.style.backgroundColor = config.color;
+            bubble.classList.remove('hidden', 'is-tapped', 'is-dragging');
+
+            const oldIcon = bubble.querySelector('svg, i');
+            const fresh = document.createElement('i');
+            fresh.id = 'feature-bubble-icon';
+            fresh.setAttribute('data-lucide', config.icon);
+            if (oldIcon) oldIcon.replaceWith(fresh); else bubble.appendChild(fresh);
+        }
+
+        function hideFeatureBubble() {
+            const bubble = document.getElementById('feature-bubble');
+            if (bubble) bubble.classList.add('hidden');
+            activeFeatureBubbleConfig = null;
+        }
+
         function hideAllRolePanels() {
             document.getElementById('panel-ketua').classList.add('hidden');
-            document.getElementById('panel-sekretaris').classList.add('hidden');
-            document.getElementById('panel-bendahara-villa').classList.add('hidden');
-            document.getElementById('panel-bendahara-tabungan').classList.add('hidden');
-            document.getElementById('panel-bendahara-yearbook').classList.add('hidden');
-            document.getElementById('panel-bendahara-kas').classList.add('hidden');
             document.getElementById('panel-admin-siswa').classList.add('hidden');
             document.querySelectorAll('.admin-section-label').forEach(el => el.classList.add('hidden'));
+
+            // Semua "halaman fitur" (sekretaris & bendahara) ditutup kembali ke dashboard
+            Object.values(FEATURE_ROLE_CONFIG).forEach(config => {
+                const page = document.getElementById(config.panelId);
+                if (page) page.classList.add('hidden');
+            });
         }
+
+        // Dipanggil saat bubble melayang di-tap (bukan diseret): bubble menyusut +
+        // ikonnya berputar sebentar seperti loading (mirip transisi tombol login),
+        // baru setelah itu halaman fitur (full page, terpisah dari dashboard) dibuka.
+        async function bukaFitur(prefix, loadFn, bubbleEl) {
+            if (bubbleEl) {
+                bubbleEl.classList.add('is-tapped');
+                const iconEl = bubbleEl.querySelector('#feature-bubble-icon, svg, i');
+                if (iconEl) {
+                    iconEl.setAttribute('data-lucide', 'loader-2');
+                    lucide.createIcons();
+                    const spinnerEl = bubbleEl.querySelector('svg') || bubbleEl.querySelector('#feature-bubble-icon');
+                    if (spinnerEl) {
+                        spinnerEl.id = 'feature-bubble-icon';
+                        spinnerEl.classList.add('is-spinning');
+                    }
+                }
+            }
+
+            // Jeda singkat supaya efek "tertekan" terasa sebelum halaman baru muncul
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            const config = FEATURE_ROLE_CONFIG[activeUser.role];
+            if (!config) return;
+
+            document.getElementById(config.panelId).classList.remove('hidden');
+            lucide.createIcons();
+            await loadFn();
+
+            if (prefix === 'sekretaris') {
+                const rekapBulanInput = document.getElementById('rekap-bulan');
+                if (rekapBulanInput && !rekapBulanInput.value) {
+                    rekapBulanInput.value = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+                }
+            }
+
+            if (bubbleEl) {
+                bubbleEl.classList.remove('is-tapped');
+                const spinnerEl = bubbleEl.querySelector('#feature-bubble-icon');
+                if (spinnerEl) {
+                    spinnerEl.classList.remove('is-spinning');
+                    spinnerEl.setAttribute('data-lucide', config.icon);
+                    lucide.createIcons();
+                }
+            }
+        }
+
+        // Tombol "Kembali" di pojok kiri atas halaman fitur: menutup halaman,
+        // kembali menampilkan dashboard (bubble melayang muncul lagi di pojok).
+        function tutupFitur(prefix) {
+            const config = FEATURE_ROLE_CONFIG[activeUser.role];
+            if (config) {
+                document.getElementById(config.panelId).classList.add('hidden');
+            }
+        }
+
+        // ============ DRAG & DROP UNTUK BUBBLE MELAYANG (seperti chat head) ============
+        (function initFeatureBubbleDrag() {
+            const bubble = document.getElementById('feature-bubble');
+            if (!bubble) return;
+
+            let dragging = false;
+            let moved = false;
+            let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+            bubble.addEventListener('pointerdown', (e) => {
+                dragging = true;
+                moved = false;
+                bubble.classList.add('is-dragging');
+
+                const rect = bubble.getBoundingClientRect();
+                startLeft = rect.left;
+                startTop = rect.top;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                // Pindah dari posisi right/bottom ke left/top supaya perhitungan drag simpel
+                bubble.style.left = startLeft + 'px';
+                bubble.style.top = startTop + 'px';
+                bubble.style.right = 'auto';
+                bubble.style.bottom = 'auto';
+
+                bubble.setPointerCapture(e.pointerId);
+            });
+
+            bubble.addEventListener('pointermove', (e) => {
+                if (!dragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                if (Math.abs(dx) > 5 || Math.abs(dy) > 5) moved = true;
+
+                const rect = bubble.getBoundingClientRect();
+                const maxLeft = window.innerWidth - rect.width - 4;
+                const maxTop = window.innerHeight - rect.height - 4;
+                const newLeft = Math.max(4, Math.min(startLeft + dx, maxLeft));
+                const newTop = Math.max(4, Math.min(startTop + dy, maxTop));
+
+                bubble.style.left = newLeft + 'px';
+                bubble.style.top = newTop + 'px';
+            });
+
+            function endDrag(e) {
+                if (!dragging) return;
+                dragging = false;
+                bubble.classList.remove('is-dragging');
+
+                if (!moved) {
+                    // Tidak digeser sama sekali -> dianggap tap, buka halaman fitur
+                    if (activeFeatureBubbleConfig) {
+                        bukaFitur(activeFeatureBubbleConfig.prefix, activeFeatureBubbleConfig.loadFn, bubble);
+                    }
+                }
+            }
+
+            bubble.addEventListener('pointerup', endDrag);
+            bubble.addEventListener('pointercancel', endDrag);
+        })();
+
 
         function getReadableRole(role) {
             switch(role) {
@@ -1812,9 +2129,32 @@
             });
         }
 
+        // Fungsi generik: hitung & tampilkan TOTAL KESELURUHAN (semua siswa dijumlah) untuk satu jenis tabungan
+        async function loadTotalKeseluruhanTabungan(tableName, elementId) {
+            if (!supabaseClient) return;
+
+            const { data, error } = await supabaseClient.from(tableName).select('nominal, jenis');
+            const el = document.getElementById(elementId);
+            if (!el) return;
+
+            if (error) {
+                el.innerText = 'Gagal memuat';
+                return;
+            }
+
+            let total = 0;
+            (data || []).forEach(item => {
+                if (item.jenis === 'setor') total += item.nominal;
+                else if (item.jenis === 'tarik') total -= item.nominal;
+            });
+
+            el.innerText = formatRupiah(total);
+        }
+
         async function loadBendaharaVillaPanel() {
             if (!supabaseClient) return;
 
+            await loadTotalKeseluruhanTabungan('tabungan_villa', 'villa-grand-total');
             await loadTotalTabunganPerSiswa('tabungan_villa', 'villa-total-siswa-list');
 
             const { data, error } = await supabaseClient
@@ -1996,6 +2336,7 @@
         async function loadBendaharaYearbookPanel() {
             if (!supabaseClient) return;
 
+            await loadTotalKeseluruhanTabungan('tabungan_yearbook', 'yearbook-grand-total');
             await loadTotalTabunganPerSiswa('tabungan_yearbook', 'yearbook-total-siswa-list');
 
             const { data, error } = await supabaseClient
@@ -2086,6 +2427,7 @@
         async function loadBendaharaKasPanel() {
             if (!supabaseClient) return;
 
+            await loadTotalKeseluruhanTabungan('tabungan_kas', 'kas-grand-total');
             await loadTotalTabunganPerSiswa('tabungan_kas', 'kas-total-siswa-list');
 
             const { data, error } = await supabaseClient
@@ -2167,86 +2509,6 @@
                 console.error("Gagal mencatat transaksi tabungan kas:", err);
                 alert("Error mencatatkan tabungan kas: " + err.message);
             }
-        }
-
-        // ====================================================================
-        // DOWNLOAD REKAP BULANAN TABUNGAN (VILLA & REGULER) - Excel 2 sheet
-        // ====================================================================
-        async function downloadRekapTabunganUmum(tableName, bulanInputId, labelFile) {
-            if (!supabaseClient) return;
-
-            const bulanInput = document.getElementById(bulanInputId).value;
-            if (!bulanInput) {
-                alert("Silakan pilih bulan rekap terlebih dahulu.");
-                return;
-            }
-
-            const [tahun, bulan] = bulanInput.split('-').map(Number);
-            const jumlahHari = new Date(tahun, bulan, 0).getDate();
-            const tanggalAwal = `${bulanInput}-01T00:00:00`;
-            const tanggalAkhir = `${bulanInput}-${String(jumlahHari).padStart(2, '0')}T23:59:59`;
-
-            const { data, error } = await supabaseClient
-                .from(tableName)
-                .select('*, siswa:siswa_id(nama)')
-                .gte('tanggal', tanggalAwal)
-                .lte('tanggal', tanggalAkhir)
-                .order('tanggal', { ascending: true });
-
-            if (error) {
-                alert("Gagal mengambil data rekap: " + error.message);
-                return;
-            }
-
-            // Sheet 1: daftar transaksi bulan tersebut
-            const rowsTransaksi = [['Tanggal', 'Nama Siswa', 'Jenis', 'Nominal', 'Keterangan']];
-            const ringkasanMap = {};
-
-            (data || []).forEach(item => {
-                const tglFormatted = new Date(item.tanggal).toLocaleString('id-ID', {
-                    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                });
-                const namaSiswa = item.siswa?.nama || 'Unknown';
-                rowsTransaksi.push([tglFormatted, namaSiswa, item.jenis, item.nominal, item.keterangan || '-']);
-
-                if (!ringkasanMap[namaSiswa]) ringkasanMap[namaSiswa] = { setor: 0, tarik: 0 };
-                if (item.jenis === 'setor') ringkasanMap[namaSiswa].setor += item.nominal;
-                else if (item.jenis === 'tarik') ringkasanMap[namaSiswa].tarik += item.nominal;
-            });
-
-            // Sheet 2: ringkasan bersih per siswa untuk bulan tersebut
-            const rowsRingkasan = [['Nama Siswa', 'Total Setor', 'Total Tarik', 'Selisih Bulan Ini']];
-            Object.keys(ringkasanMap).sort().forEach(nama => {
-                const r = ringkasanMap[nama];
-                rowsRingkasan.push([nama, r.setor, r.tarik, r.setor - r.tarik]);
-            });
-
-            const wsTransaksi = XLSX.utils.aoa_to_sheet(rowsTransaksi);
-            wsTransaksi['!cols'] = [{ wch: 20 }, { wch: 26 }, { wch: 10 }, { wch: 14 }, { wch: 26 }];
-
-            const wsRingkasan = XLSX.utils.aoa_to_sheet(rowsRingkasan);
-            wsRingkasan['!cols'] = [{ wch: 26 }, { wch: 14 }, { wch: 14 }, { wch: 16 }];
-
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, wsTransaksi, 'Transaksi');
-            XLSX.utils.book_append_sheet(wb, wsRingkasan, 'Ringkasan');
-            XLSX.writeFile(wb, `Rekap_${labelFile}_${bulanInput}.xlsx`);
-        }
-
-        async function downloadRekapVilla() {
-            await downloadRekapTabunganUmum('tabungan_villa', 'rekap-villa-bulan', 'TabunganVilla');
-        }
-
-        async function downloadRekapTabungan() {
-            await downloadRekapTabunganUmum('tabungan', 'rekap-tabungan-bulan', 'TabunganReguler');
-        }
-
-        async function downloadRekapYearbook() {
-            await downloadRekapTabunganUmum('tabungan_yearbook', 'rekap-yearbook-bulan', 'TabunganYearbook');
-        }
-
-        async function downloadRekapKas() {
-            await downloadRekapTabunganUmum('tabungan_kas', 'rekap-kas-bulan', 'TabunganKas');
         }
 
         // ====================================================================
