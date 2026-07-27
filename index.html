@@ -253,8 +253,8 @@
                 </div>
             </header>
 
-            <!-- PAPAN PENGUMUMAN & TUGAS (TAMPIL UNTUK SEMUA ROLE) -->
-            <section class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
+            <!-- PAPAN PENGUMUMAN & TUGAS (TAMPIL UNTUK SEMUA ROLE KECUALI WALI KELAS) -->
+            <section id="base-pengumuman-section" class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
                 <div class="flex items-center gap-2 mb-3">
                     <i data-lucide="megaphone" class="w-5 h-5 text-primary-600"></i>
                     <h3 class="font-bold text-slate-800 text-sm">Papan Pengumuman / Tugas</h3>
@@ -264,8 +264,8 @@
                 </div>
             </section>
 
-            <!-- STATS BLOCK (FOR ALL USERS / ANGGOTA BASE VIEW) -->
-            <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <!-- STATS BLOCK (FOR ALL USERS / ANGGOTA BASE VIEW, KECUALI WALI KELAS) -->
+            <section id="base-stats-section" class="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <!-- Stat 1: Absen Hari ini -->
                 <div class="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-3.5">
                     <div class="w-11 h-11 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
@@ -322,8 +322,8 @@
                 </div>
             </section>
 
-            <!-- ABSEN SHOLAT SUBUH (TAMPIL & BISA DIPENCET OLEH SEMUA SISWA) -->
-            <section class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
+            <!-- ABSEN SHOLAT SUBUH (TAMPIL & BISA DIPENCET OLEH SEMUA SISWA, KECUALI WALI KELAS) -->
+            <section id="base-subuh-section" class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
                 <div class="flex items-center gap-2 mb-3">
                     <i data-lucide="moon-star" class="w-5 h-5 text-indigo-600"></i>
                     <h3 class="font-bold text-slate-800 text-sm">Absen Sholat Subuh</h3>
@@ -472,6 +472,45 @@
                     </div>
                 </div>
 
+                <!-- PANEL WALI KELAS: hanya monitoring ringkas (absen harian, absen subuh, total kas) -->
+                <div id="panel-wali-kelas" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Absensi Harian -->
+                        <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                            <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                                <i data-lucide="users" class="w-4 h-4 text-emerald-600"></i> Rekap Absensi Hari Ini
+                            </h4>
+                            <div class="space-y-2 text-sm max-h-[220px] overflow-y-auto pr-2" id="walikelas-absen-list">
+                                <!-- Dynamic List -->
+                            </div>
+                        </div>
+
+                        <!-- Total Uang Kas -->
+                        <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50 flex flex-col justify-center items-center text-center">
+                            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
+                                <i data-lucide="wallet" class="w-6 h-6"></i>
+                            </div>
+                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Uang Kas Kelas</p>
+                            <p class="text-2xl font-bold text-slate-800 mt-1" id="walikelas-total-kas">Rp 0</p>
+                        </div>
+                    </div>
+
+                    <!-- Rekap Absen Sholat Subuh -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3">
+                            <h4 class="font-semibold text-sm flex items-center gap-1.5 text-slate-700 shrink-0">
+                                <i data-lucide="moon-star" class="w-4 h-4 text-indigo-600"></i> Rekap Absen Sholat Subuh
+                            </h4>
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <input type="date" id="walikelas-subuh-tanggal" onchange="loadWaliKelasSubuhRekap()" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500 flex-grow">
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm max-h-[260px] overflow-y-auto pr-2" id="walikelas-subuh-list">
+                            <!-- Dynamic List -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 7. ADMIN: KELOLA SISWA PANEL -->
                 <h3 id="admin-label-siswa" class="admin-section-label hidden text-xs font-bold text-slate-400 uppercase tracking-wider mt-4 mb-1 flex items-center gap-1.5">
                     <i data-lucide="users-round" class="w-3.5 h-3.5"></i> Kelola Data Siswa
@@ -517,8 +556,8 @@
 
             </section>
 
-            <!-- HISTORICAL DATA AREA (ANGGOTA SPECIFIC CARD) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- HISTORICAL DATA AREA (ANGGOTA SPECIFIC CARD, KECUALI WALI KELAS) -->
+            <div id="base-historical-section" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
                 <!-- Card Left: Riwayat Nabung Siswa Aktif -->
                 <div class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
@@ -1083,12 +1122,27 @@
             }
         }
 
+        // Helper: daftar siswa "murni" tanpa akun Wali Kelas.
+        // Dipakai di manapun yang seharusnya cuma menampilkan siswa (absensi, bendahara, dsb),
+        // supaya akun Wali Kelas tidak nyempil di daftar-daftar itu.
+        function getSiswaOnly() {
+            return siswaListGlobal.filter(s => s.role !== 'wali_kelas');
+        }
+
         // 2.2 Populate Dropdowns
         function populateLoginDropdown(siswaList) {
             const selectEl = document.getElementById('login-siswa');
             selectEl.innerHTML = '<option value="" disabled selected>Pilih nama kamu...</option>';
-            
-            siswaList.forEach(siswa => {
+
+            // Akun Wali Kelas ditaruh paling atas biar tidak perlu discroll,
+            // sisanya (siswa) tetap urut seperti biasa.
+            const sorted = siswaList.slice().sort((a, b) => {
+                const aIsWali = a.role === 'wali_kelas' ? 0 : 1;
+                const bIsWali = b.role === 'wali_kelas' ? 0 : 1;
+                return aIsWali - bIsWali;
+            });
+
+            sorted.forEach(siswa => {
                 const opt = document.createElement('option');
                 opt.value = siswa.id;
                 opt.textContent = siswa.nama;
@@ -1096,7 +1150,9 @@
             });
         }
 
-        function populateRoleDropdowns(siswaList) {
+        function populateRoleDropdowns(siswaListRaw) {
+            const siswaList = siswaListRaw.filter(s => s.role !== 'wali_kelas');
+
             // Populate dropdown untuk panel Sekretaris
             const sekrSelect = document.getElementById('sekr-siswa');
             if (sekrSelect) {
@@ -1247,19 +1303,30 @@
             document.getElementById('user-display-role').innerText = getReadableRole(activeUser.role);
             document.getElementById('user-avatar-text').innerText = activeUser.nama.substring(0, 2).toUpperCase();
 
-            // Load Data Base (Untuk Anggota)
-            await loadBaseDashboardStats();
-            await loadSiswaNabungRiwayat();
-            renderSiswaAttendanceCalendar();
-            await loadPengumumanBoard();
-            await loadMySubuhStatus();
-            startSubuhClock();
+            // Wali Kelas: dashboard-nya berbeda sendiri, tidak menampilkan papan pengumuman,
+            // stats pribadi, absen subuh pribadi, maupun riwayat tabungan/kalender pribadi.
+            const isWaliKelas = activeUser.role === 'wali_kelas';
+            const baseSectionIds = ['base-pengumuman-section', 'base-stats-section', 'base-subuh-section', 'base-historical-section'];
+            baseSectionIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('hidden', isWaliKelas);
+            });
+
+            if (!isWaliKelas) {
+                // Load Data Base (Untuk Anggota)
+                await loadBaseDashboardStats();
+                await loadSiswaNabungRiwayat();
+                renderSiswaAttendanceCalendar();
+                await loadPengumumanBoard();
+                await loadMySubuhStatus();
+                startSubuhClock();
+            }
 
             // Render Panel Spesifik Berdasarkan Role
             const rolePanel = document.getElementById('role-panel');
             hideAllRolePanels();
 
-            if (activeUser.role === 'ketua' || activeUser.role === 'wakil ketua' || activeUser.role === 'admin') {
+            if (activeUser.role === 'ketua' || activeUser.role === 'wakil ketua' || activeUser.role === 'admin' || activeUser.role === 'wali_kelas') {
                 // Role ini tetap tampil inline di dashboard (bukan lewat bubble/halaman terpisah)
                 rolePanel.classList.remove('hidden');
                 hideFeatureBubble();
@@ -1276,6 +1343,14 @@
                     await loadKetuaPanel();
                     await loadKetuaPengumumanList();
                     await loadKetuaSubuhRekap();
+                } else if (activeUser.role === 'wali_kelas') {
+                    // Wali Kelas: hanya memantau rekap absensi harian, rekap absen subuh,
+                    // dan total uang kas. Tidak ada kelola pengumuman, tidak ada kelola siswa.
+                    panelTitle.innerText = "Panel Monitor Wali Kelas";
+                    panelIcon.setAttribute('data-lucide', 'user-check');
+                    document.getElementById('panel-wali-kelas').classList.remove('hidden');
+                    await loadWaliKelasPanel();
+                    await loadWaliKelasSubuhRekap();
                 } else {
                     panelTitle.innerText = "Panel Admin";
                     panelIcon.setAttribute('data-lucide', 'crown');
@@ -1330,6 +1405,7 @@
 
         function hideAllRolePanels() {
             document.getElementById('panel-ketua').classList.add('hidden');
+            document.getElementById('panel-wali-kelas').classList.add('hidden');
             document.getElementById('panel-admin-siswa').classList.add('hidden');
             document.querySelectorAll('.admin-section-label').forEach(el => el.classList.add('hidden'));
 
@@ -1467,6 +1543,7 @@
                 case 'bendahara_tabungan': return 'Bendahara Tabungan';
                 case 'bendahara_tabungan_yearbook': return 'Bendahara Tabungan Yearbook';
                 case 'bendahara_tabungan_kas': return 'Bendahara Tabungan Kas';
+                case 'wali_kelas': return 'Wali Kelas';
                 case 'admin': return 'Admin';
                 default: return 'Siswa / Anggota';
             }
@@ -1719,7 +1796,7 @@
             const listEl = document.getElementById('ketua-absen-list');
             listEl.innerHTML = '';
 
-            siswaListGlobal.forEach(siswa => {
+            getSiswaOnly().forEach(siswa => {
                 const userAbsen = absenMap[siswa.id];
                 const statusName = userAbsen ? userAbsen.status : 'Belum Absen';
                 
@@ -1782,6 +1859,102 @@
                 });
             }
             document.getElementById('ketua-total-kas').innerText = formatRupiah(totalKasVal);
+        }
+
+        // ====================================================================
+        // PANEL WALI KELAS: rekap absen harian + total uang kas saja
+        // ====================================================================
+        async function loadWaliKelasPanel() {
+            if (!supabaseClient) return;
+
+            // Rekap Absensi Hari Ini
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            const { data: listAbsen } = await supabaseClient
+                .from('absensi')
+                .select('*, siswa:siswa_id(nama)');
+
+            const filterToday = listAbsen ? listAbsen.filter(a => a.tanggal === todayStr) : [];
+            const absenMap = {};
+            filterToday.forEach(a => {
+                absenMap[a.siswa_id] = a;
+            });
+
+            const listEl = document.getElementById('walikelas-absen-list');
+            listEl.innerHTML = '';
+
+            getSiswaOnly().forEach(siswa => {
+                const userAbsen = absenMap[siswa.id];
+                const statusName = userAbsen ? userAbsen.status : 'Belum Absen';
+
+                let badgeClass = 'bg-slate-100 text-slate-400';
+                if (statusName === 'Hadir') badgeClass = 'bg-emerald-100 text-emerald-800';
+                else if (statusName === 'Ijin') badgeClass = 'bg-yellow-100 text-yellow-800';
+                else if (statusName === 'Sakit') badgeClass = 'bg-sky-100 text-sky-800';
+                else if (statusName === 'Dispen') badgeClass = 'bg-purple-100 text-purple-800';
+                else if (statusName === 'Alpha') badgeClass = 'bg-rose-100 text-rose-800';
+
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-100 transition";
+                div.innerHTML = `
+                    <span class="font-medium text-slate-700">${siswa.nama}</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${badgeClass}">${statusName}</span>
+                `;
+                listEl.appendChild(div);
+            });
+
+            // Total Uang Kas
+            const { data: sumKas } = await supabaseClient.from('tabungan_kas').select('nominal, jenis');
+            let totalKasVal = 0;
+            if (sumKas) {
+                sumKas.forEach(t => {
+                    if (t.jenis === 'setor') totalKasVal += t.nominal;
+                    else if (t.jenis === 'tarik') totalKasVal -= t.nominal;
+                });
+            }
+            document.getElementById('walikelas-total-kas').innerText = formatRupiah(totalKasVal);
+        }
+
+        async function loadWaliKelasSubuhRekap() {
+            if (!supabaseClient) return;
+
+            const tglInput = document.getElementById('walikelas-subuh-tanggal');
+            if (tglInput && !tglInput.value) tglInput.value = todayDateStr();
+            const tanggal = tglInput ? tglInput.value : todayDateStr();
+
+            const { data: listSubuh } = await supabaseClient
+                .from('absensi_subuh')
+                .select('*')
+                .eq('tanggal', tanggal);
+
+            const subuhMap = {};
+            (listSubuh || []).forEach(a => { subuhMap[a.siswa_id] = a; });
+
+            const listEl = document.getElementById('walikelas-subuh-list');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+
+            getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama)).forEach(siswa => {
+                const rec = subuhMap[siswa.id];
+                const nilai = rec ? rec.nilai : null;
+                const jamStr = rec ? new Date(rec.jam_absen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+
+                let badgeClass = 'bg-slate-100 text-slate-400';
+                if (nilai === 'A') badgeClass = 'bg-emerald-100 text-emerald-800';
+                else if (nilai === 'B') badgeClass = 'bg-amber-100 text-amber-800';
+                else if (nilai === 'C') badgeClass = 'bg-rose-100 text-rose-800';
+
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-100 transition";
+                div.innerHTML = `
+                    <span class="font-medium text-slate-700">${siswa.nama}</span>
+                    <span class="flex items-center gap-2">
+                        <span class="text-[10px] text-slate-400">${jamStr}</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${badgeClass}">${nilai || 'Belum Absen'}</span>
+                    </span>
+                `;
+                listEl.appendChild(div);
+            });
         }
 
         // ====================================================================
@@ -1929,7 +2102,7 @@
             if (!listEl) return;
             listEl.innerHTML = '';
 
-            siswaListGlobal.slice().sort((a, b) => a.nama.localeCompare(b.nama)).forEach(siswa => {
+            getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama)).forEach(siswa => {
                 const rec = subuhMap[siswa.id];
                 const nilai = rec ? rec.nilai : null;
                 const jamStr = rec ? new Date(rec.jam_absen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
@@ -1989,7 +2162,7 @@
             const header = ['Nama Siswa', ...Array.from({ length: jumlahHari }, (_, i) => i + 1), 'Total A', 'Total B', 'Total C', 'Total Tanpa Absen'];
             const rows = [header];
 
-            siswaListGlobal.slice().sort((a, b) => a.nama.localeCompare(b.nama)).forEach(siswa => {
+            getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama)).forEach(siswa => {
                 const rekapSiswa = rekapMap[siswa.id] || {};
                 const kolomHari = Array.from({ length: jumlahHari }, (_, i) => rekapSiswa[i + 1] || '-');
                 const totalPerNilai = { A: 0, B: 0, C: 0 };
@@ -2211,7 +2384,7 @@
             }
 
             // Tampilkan SEMUA siswa (bukan cuma yang sudah diabsen) supaya sekretaris tinggal tap
-            siswaListGlobal.forEach(siswa => {
+            getSiswaOnly().forEach(siswa => {
                 const existing = absenMap[siswa.id];
                 const currentStatus = existing ? existing.status : null;
 
@@ -2347,7 +2520,7 @@
             const header = ['Nama Siswa', ...Array.from({ length: jumlahHari }, (_, i) => i + 1), 'Total H', 'Total I', 'Total S', 'Total D', 'Total A'];
             const rows = [header];
 
-            siswaListGlobal.slice().sort((a, b) => a.nama.localeCompare(b.nama)).forEach(siswa => {
+            getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama)).forEach(siswa => {
                 const rekapSiswa = rekapMap[siswa.id] || {};
                 const kolomHari = Array.from({ length: jumlahHari }, (_, i) => rekapSiswa[i + 1] || '-');
                 const totalPerKode = { H: 0, I: 0, S: 0, D: 0, A: 0 };
@@ -2396,7 +2569,7 @@
                 else if (item.jenis === 'tarik') totalMap[item.siswa_id] -= item.nominal;
             });
 
-            const daftarSiswa = siswaListGlobal.slice().sort((a, b) => a.nama.localeCompare(b.nama));
+            const daftarSiswa = getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama));
             if (daftarSiswa.length === 0) {
                 container.innerHTML = '<p class="text-center text-slate-400 italic text-xs py-3 col-span-2">Belum ada data siswa.</p>';
                 return;
@@ -2808,6 +2981,7 @@
             { value: 'bendahara_tabungan', label: 'Bendahara Tabungan' },
             { value: 'bendahara_tabungan_yearbook', label: 'Bendahara Tabungan Yearbook' },
             { value: 'bendahara_tabungan_kas', label: 'Bendahara Tabungan Kas' },
+            { value: 'wali_kelas', label: 'Wali Kelas' },
             { value: 'admin', label: 'Admin' }
         ];
 
@@ -2901,7 +3075,8 @@
                 { id: "5", nama: "Dedi (Anggota)", pin: "123456", role: "anggota" },
                 { id: "6", nama: "Eka (Anggota)", pin: "123456", role: "anggota" },
                 { id: "7", nama: "Fajar (Ben. Yearbook)", pin: "777777", role: "bendahara_tabungan_yearbook" },
-                { id: "8", nama: "Gita (Ben. Kas)", pin: "888888", role: "bendahara_tabungan_kas" }
+                { id: "8", nama: "Gita (Ben. Kas)", pin: "888888", role: "bendahara_tabungan_kas" },
+                { id: "9", nama: "TITI NURHAYATI", pin: "999999", role: "wali_kelas" }
             ];
 
             populateLoginDropdown(siswaListGlobal);
