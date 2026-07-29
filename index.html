@@ -295,7 +295,7 @@
                     </div>
                     <div>
                         <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Tabungan Reguler</p>
-                        <h3 class="text-base font-bold mt-0.5 text-slate-800" id="stat-total-tabungan">Lihat di Aplikasi AIO Neges</h3>
+                        <h3 class="text-sm font-bold mt-0.5 text-slate-800 leading-snug" id="stat-total-tabungan">Lihat di Aplikasi AIO Neges</h3>
                     </div>
                 </div>
 
@@ -709,7 +709,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
-                            <input type="number" id="villa-nominal" min="1000" step="500" placeholder="10000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
+                            <input type="number" id="villa-nominal" min="5000" step="500" placeholder="10000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
@@ -1582,20 +1582,9 @@
                 statAbsen.className = "text-base font-bold mt-0.5 text-slate-400";
             }
 
-            // 5.2 Total Tabungan Saya
-            const { data: tabData } = await supabaseClient
-                .from('tabungan')
-                .select('nominal, jenis')
-                .eq('siswa_id', activeUser.id);
-            
-            let totalTab = 0;
-            if (tabData) {
-                tabData.forEach(t => {
-                    if (t.jenis === 'setor') totalTab += t.nominal;
-                    else if (t.jenis === 'tarik') totalTab -= t.nominal;
-                });
-            }
-            document.getElementById('stat-total-tabungan').innerText = formatRupiah(totalTab);
+            // 5.2 Total Tabungan Reguler: nominalnya sengaja tidak ditampilkan di sini lagi.
+            // Kartu "Total Tabungan Reguler" tetap menampilkan teks statis "Lihat di Aplikasi AIO Neges"
+            // (lihat HTML), jadi tidak perlu di-fetch/di-overwrite di sini.
 
             // 5.3 Kehadiran Sebulan (30 Hari Terakhir)
             const thirtyDaysAgo = new Date();
