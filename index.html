@@ -244,6 +244,7 @@
                         <div class="text-left">
                             <h4 class="font-semibold text-sm leading-tight" id="user-display-name">Nama Siswa</h4>
                             <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-200 border border-sky-500/30" id="user-display-role">Anggota</span>
+                            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-400/30 ml-1" id="user-display-kelas">Belum diatur</span>
                         </div>
                     </div>
                     <button onclick="handleLogout()" class="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 text-red-300 hover:text-white px-3 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition">
@@ -252,6 +253,23 @@
                     </button>
                 </div>
             </header>
+
+            <!-- SERAGAM HARI INI (per kelas: NON / UTBK), KECUALI WALI KELAS -->
+            <section id="base-seragam-section" class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-primary-50 text-primary-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i data-lucide="shirt" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Seragam Hari Ini <span id="seragam-hari" class="normal-case"></span></p>
+                            <h3 class="text-base font-bold text-slate-800 leading-snug" id="seragam-nama">-</h3>
+                            <p class="text-xs text-slate-500 mt-0.5" id="seragam-ket"></p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0" id="seragam-kelas-badge">Belum diatur</span>
+                </div>
+            </section>
 
             <!-- PAPAN PENGUMUMAN & TUGAS (TAMPIL UNTUK SEMUA ROLE KECUALI WALI KELAS) -->
             <section id="base-pengumuman-section" class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
@@ -535,7 +553,16 @@
                                     <option value="bendahara_tabungan">Bendahara Tabungan</option>
                                     <option value="bendahara_tabungan_yearbook">Bendahara Tabungan Yearbook</option>
                                     <option value="bendahara_tabungan_kas">Bendahara Tabungan Kas</option>
+                                    <option value="wali_kelas">Wali Kelas</option>
                                     <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Kelas</label>
+                                <select id="admin-edit-kelas" class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                    <option value="">Belum diatur</option>
+                                    <option value="non">NON</option>
+                                    <option value="utbk">UTBK</option>
                                 </select>
                             </div>
                             <div class="flex items-end justify-between gap-3">
@@ -547,7 +574,7 @@
                                     </div>
                                 </div>
                                 <button type="button" onclick="simpanRoleSiswa()" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
-                                    <i data-lucide="save" class="w-4 h-4"></i> Simpan Role
+                                    <i data-lucide="save" class="w-4 h-4"></i> Simpan
                                 </button>
                             </div>
                         </div>
@@ -1122,6 +1149,53 @@
             }
         }
 
+        // ====================================================================
+        // KELAS (NON / UTBK) & SERAGAM HARI INI
+        // ====================================================================
+        // Jadwal seragam per kelas. Kunci hari mengikuti Date.getDay(): 0=Minggu, 1=Senin, ... 6=Sabtu.
+        // GANTI isinya sesuai jadwal seragam sekolah kalian yang sebenarnya.
+        const SERAGAM_JADWAL = {
+            non: {
+                1: { nama: 'PSAS', ket: 'Seragam upacara lengkap (topi & dasi)' },
+                2: { nama: 'Batik', ket: '' },
+                3: { nama: 'Pramuka', ket: '' },
+                4: { nama: 'Daerah', ket: '' },
+                5: { nama: 'Muslim', ket: '' }
+            },
+            utbk: {
+                1: { nama: 'PSAS', ket: 'Seragam upacara lengkap (topi & dasi)' },
+                2: { nama: 'Batik', ket: '' },
+                3: { nama: 'Pramuka', ket: '' },
+                4: { nama: 'Daerah', ket: '' },
+                5: { nama: 'Muslim', ket: '' }
+            }
+        };
+
+        function getKelasKey(user) {
+            if (!user) return '';
+            return (user.kelas_tipe === 'utbk' || user.kelas_tipe === 'non') ? user.kelas_tipe : '';
+        }
+
+        function getKelasLabel(key) {
+            if (key === 'utbk') return 'UTBK';
+            if (key === 'non') return 'NON';
+            return 'Belum diatur';
+        }
+
+        function renderSeragamHariIni() {
+            const kelasKey = getKelasKey(activeUser);
+            const today = new Date();
+            const dayIdx = today.getDay();
+            // Kelas belum diatur -> pakai jadwal NON sebagai cadangan
+            const info = (SERAGAM_JADWAL[kelasKey || 'non'] || {})[dayIdx];
+
+            document.getElementById('seragam-hari').innerText =
+                '(' + today.toLocaleDateString('id-ID', { weekday: 'long' }) + ')';
+            document.getElementById('seragam-nama').innerText = info ? info.nama : 'Libur / tidak ada seragam';
+            document.getElementById('seragam-ket').innerText = info ? (info.ket || '') : '';
+            document.getElementById('seragam-kelas-badge').innerText = getKelasLabel(kelasKey);
+        }
+
         // Helper: daftar siswa "murni" tanpa akun Wali Kelas.
         // Dipakai di manapun yang seharusnya cuma menampilkan siswa (absensi, bendahara, dsb),
         // supaya akun Wali Kelas tidak nyempil di daftar-daftar itu.
@@ -1301,18 +1375,24 @@
             // Set Header Profiles
             document.getElementById('user-display-name').innerText = activeUser.nama;
             document.getElementById('user-display-role').innerText = getReadableRole(activeUser.role);
+            const kelasBadge = document.getElementById('user-display-kelas');
+            if (kelasBadge) {
+                kelasBadge.innerText = getKelasLabel(getKelasKey(activeUser));
+                kelasBadge.classList.toggle('hidden', activeUser.role === 'wali_kelas');
+            }
             document.getElementById('user-avatar-text').innerText = activeUser.nama.substring(0, 2).toUpperCase();
 
             // Wali Kelas: dashboard-nya berbeda sendiri, tidak menampilkan papan pengumuman,
             // stats pribadi, absen subuh pribadi, maupun riwayat tabungan/kalender pribadi.
             const isWaliKelas = activeUser.role === 'wali_kelas';
-            const baseSectionIds = ['base-pengumuman-section', 'base-stats-section', 'base-subuh-section', 'base-historical-section'];
+            const baseSectionIds = ['base-seragam-section', 'base-pengumuman-section', 'base-stats-section', 'base-subuh-section', 'base-historical-section'];
             baseSectionIds.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.toggle('hidden', isWaliKelas);
             });
 
             if (!isWaliKelas) {
+                renderSeragamHariIni();
                 // Load Data Base (Untuk Anggota)
                 await loadBaseDashboardStats();
                 await loadSiswaNabungRiwayat();
@@ -3012,6 +3092,7 @@
             if (!siswa) return;
 
             document.getElementById('admin-edit-role').value = siswa.role;
+            document.getElementById('admin-edit-kelas').value = getKelasKey(siswa);
             editor.classList.remove('hidden');
         }
 
@@ -3020,14 +3101,15 @@
 
             const siswaId = document.getElementById('admin-pilih-siswa').value;
             const newRole = document.getElementById('admin-edit-role').value;
+            const newKelas = document.getElementById('admin-edit-kelas').value;
             if (!siswaId) return;
 
             try {
-                const { error } = await supabaseClient.from('siswa').update({ role: newRole }).eq('id', siswaId);
+                const { error } = await supabaseClient.from('siswa').update({ role: newRole, kelas_tipe: newKelas || null }).eq('id', siswaId);
                 if (error) throw error;
                 await fetchSiswaList();
                 await loadAdminSiswaPanel();
-                alert("Role berhasil diperbarui.");
+                alert("Role & kelas berhasil diperbarui.");
             } catch (err) {
                 console.error("Gagal mengubah role siswa:", err);
                 alert("Error mengubah role: " + err.message);
@@ -3065,15 +3147,15 @@
             console.log("Menjalankan dalam mode demo offline. Hubungkan ke Supabase asli untuk mengaktifkan database real-time.");
             
             siswaListGlobal = [
-                { id: "1", nama: "Ahmad (Ketua)", pin: "111111", role: "ketua" },
-                { id: "2", nama: "Siti (Sekretaris)", pin: "222222", role: "sekretaris" },
-                { id: "3", nama: "Budi (Ben. Villa)", pin: "333333", role: "bendahara_tabungan_villa" },
-                { id: "4", nama: "Rina (Ben. Tabungan)", pin: "444444", role: "bendahara_tabungan" },
-                { id: "5", nama: "Dedi (Anggota)", pin: "123456", role: "anggota" },
-                { id: "6", nama: "Eka (Anggota)", pin: "123456", role: "anggota" },
-                { id: "7", nama: "Fajar (Ben. Yearbook)", pin: "777777", role: "bendahara_tabungan_yearbook" },
-                { id: "8", nama: "Gita (Ben. Kas)", pin: "888888", role: "bendahara_tabungan_kas" },
-                { id: "9", nama: "TITI NURHAYATI", pin: "999999", role: "wali_kelas" }
+                { id: "1", nama: "Ahmad (Ketua)", pin: "111111", role: "ketua", kelas_tipe: "non" },
+                { id: "2", nama: "Siti (Sekretaris)", pin: "222222", role: "sekretaris", kelas_tipe: "non" },
+                { id: "3", nama: "Budi (Ben. Villa)", pin: "333333", role: "bendahara_tabungan_villa", kelas_tipe: "non" },
+                { id: "4", nama: "Rina (Ben. Tabungan)", pin: "444444", role: "bendahara_tabungan", kelas_tipe: "non" },
+                { id: "5", nama: "Dedi (Anggota)", pin: "123456", role: "anggota", kelas_tipe: "non" },
+                { id: "6", nama: "Eka (Anggota)", pin: "123456", role: "anggota", kelas_tipe: "utbk" },
+                { id: "7", nama: "Fajar (Ben. Yearbook)", pin: "777777", role: "bendahara_tabungan_yearbook", kelas_tipe: "non" },
+                { id: "8", nama: "Gita (Ben. Kas)", pin: "888888", role: "bendahara_tabungan_kas", kelas_tipe: "utbk" },
+                { id: "9", nama: "TITI NURHAYATI", pin: "999999", role: "wali_kelas", kelas_tipe: "non" }
             ];
 
             populateLoginDropdown(siswaListGlobal);
