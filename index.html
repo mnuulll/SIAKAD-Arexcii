@@ -628,12 +628,15 @@
                     <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-3">
                         <i data-lucide="history" class="w-5 h-5 text-primary-600"></i> Log Tabungan
                     </h3>
+                    <div class="flex gap-2 mb-4">
+                        <button type="button" id="log-tab-villa" onclick="setLogTabunganSumber('Villa')" class="flex-1 sm:flex-none px-5 py-2 rounded-lg border text-sm font-semibold transition bg-amber-500 text-white border-amber-500">Villa</button>
+                        <button type="button" id="log-tab-yearbook" onclick="setLogTabunganSumber('Yearbook')" class="flex-1 sm:flex-none px-5 py-2 rounded-lg border text-sm font-semibold transition bg-white text-slate-500 border-slate-200 hover:bg-slate-50">Yearbook</button>
+                    </div>
                     <div class="overflow-x-auto border border-slate-100 rounded-xl">
                         <table class="w-full text-left border-collapse text-xs">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
                                     <th class="p-3">Tanggal & Waktu</th>
-                                    <th class="p-3 text-center">Sumber</th>
                                     <th class="p-3 text-center">Tipe</th>
                                     <th class="p-3 text-right">Nominal</th>
                                     <th class="p-3">Keterangan</th>
@@ -641,7 +644,7 @@
                             </thead>
                             <tbody id="siswa-tabungan-riwayat-body" class="divide-y divide-slate-100">
                                 <tr>
-                                    <td colspan="5" class="p-8 text-center text-slate-400 font-medium">Belum ada riwayat transaksi.</td>
+                                    <td colspan="4" class="p-8 text-center text-slate-400 font-medium">Belum ada riwayat tabungan.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1175,6 +1178,14 @@
                 if (el) el.classList.toggle('hidden', key !== name);
             });
             window.scrollTo({ top: 0 });
+
+            // Tombol melayang (sekretaris/bendahara) disembunyikan di halaman tabungan,
+            // dan dimunculkan lagi saat kembali ke dashboard.
+            if (name === 'home') {
+                if (activeUser && FEATURE_ROLE_CONFIG[activeUser.role]) showFeatureBubbleForRole(activeUser.role);
+            } else {
+                hideFeatureBubble();
+            }
             lucide.createIcons();
         }
 
@@ -1745,11 +1756,11 @@
         }
 
         // 5.5 Render Tabungan Riwayat Saya
+        let logTabunganData = { Villa: [], Yearbook: [] };
+        let logTabunganSumber = 'Villa';
+
         async function loadSiswaNabungRiwayat() {
             if (!supabaseClient) return;
-
-            const tBody = document.getElementById('siswa-tabungan-riwayat-body');
-            tBody.innerHTML = '';
 
             // Log hanya untuk Villa dan Yearbook (tabungan Reguler tidak ditampilkan di sini)
             const [resVilla, resYearbook] = await Promise.all([
@@ -1757,40 +1768,57 @@
                 supabaseClient.from('tabungan_yearbook').select('*').eq('siswa_id', activeUser.id)
             ]);
 
-            const dataVilla = (resVilla.data || []).map(item => ({ ...item, sumber: 'Villa' }));
-            const dataYearbook = (resYearbook.data || []).map(item => ({ ...item, sumber: 'Yearbook' }));
+            const byDateDesc = (a, b) => new Date(b.tanggal) - new Date(a.tanggal);
+            logTabunganData = {
+                Villa: (resVilla.data || []).slice().sort(byDateDesc),
+                Yearbook: (resYearbook.data || []).slice().sort(byDateDesc)
+            };
+            renderLogTabungan();
+        }
 
-            const gabungan = [...dataVilla, ...dataYearbook]
-                .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+        // Pilih sumber log: 'Villa' atau 'Yearbook'
+        function setLogTabunganSumber(sumber) {
+            logTabunganSumber = sumber;
+            renderLogTabungan();
+        }
 
-            if (gabungan.length === 0) {
-                tBody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-400 font-medium">Belum ada riwayat transaksi.</td></tr>';
+        function renderLogTabungan() {
+            const tBody = document.getElementById('siswa-tabungan-riwayat-body');
+            if (!tBody) return;
+            tBody.innerHTML = '';
+
+            // Style tab aktif/nonaktif
+            const activeCls = {
+                Villa: 'bg-amber-500 text-white border-amber-500',
+                Yearbook: 'bg-purple-600 text-white border-purple-600'
+            };
+            const idleCls = 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50';
+            ['Villa', 'Yearbook'].forEach(name => {
+                const btn = document.getElementById('log-tab-' + name.toLowerCase());
+                if (!btn) return;
+                btn.className = 'flex-1 sm:flex-none px-5 py-2 rounded-lg border text-sm font-semibold transition ' +
+                    (logTabunganSumber === name ? activeCls[name] : idleCls);
+            });
+
+            const rows = logTabunganData[logTabunganSumber] || [];
+            if (rows.length === 0) {
+                tBody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400 font-medium">Belum ada riwayat tabungan ${logTabunganSumber}.</td></tr>`;
                 return;
             }
 
-            const sumberBadge = {
-                Villa: 'bg-amber-100 text-amber-700',
-                Yearbook: 'bg-purple-100 text-purple-700'
-            };
-
-            gabungan.forEach(item => {
+            rows.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition";
-                
+
                 const formattedDate = new Date(item.tanggal).toLocaleString('id-ID', {
                     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                 });
-
                 const badgeBg = item.jenis === 'setor' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
                 const sign = item.jenis === 'setor' ? '+' : '-';
                 const nominalColor = item.jenis === 'setor' ? 'text-emerald-600' : 'text-amber-600';
-                const sumberBg = sumberBadge[item.sumber] || 'bg-slate-100 text-slate-600';
 
                 tr.innerHTML = `
                     <td class="p-3 font-medium text-slate-600">${formattedDate}</td>
-                    <td class="p-3 text-center">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${sumberBg}">${item.sumber}</span>
-                    </td>
                     <td class="p-3 text-center">
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${badgeBg}">${item.jenis}</span>
                     </td>
