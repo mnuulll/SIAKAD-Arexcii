@@ -283,7 +283,7 @@
             </section>
 
             <!-- STATS BLOCK (FOR ALL USERS / ANGGOTA BASE VIEW, KECUALI WALI KELAS) -->
-            <section id="base-stats-section" class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <section id="base-stats-section" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <!-- Stat 1: Absen Hari ini -->
                 <div class="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-3.5">
                     <div class="w-11 h-11 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
@@ -295,38 +295,17 @@
                     </div>
                 </div>
 
-                <!-- Stat 2: Tabungan Villa Saya -->
-                <div class="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-3.5">
-                    <div class="w-11 h-11 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
-                        <i data-lucide="palmtree" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Tabungan Villa</p>
-                        <h3 class="text-base font-bold mt-0.5 text-slate-800" id="stat-villa-saya">-</h3>
-                    </div>
-                </div>
-
-                <!-- Stat 3: Total Tabungan -->
-                <div class="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-3.5">
+                <!-- Stat 2: Tombol Tabungan (membuka modal informasi tabungan) -->
+                <button type="button" onclick="openTabunganInfo()" class="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-3.5 text-left hover:border-primary-300 hover:shadow-md transition w-full">
                     <div class="w-11 h-11 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center shrink-0">
                         <i data-lucide="wallet" class="w-5 h-5"></i>
                     </div>
-                    <div>
-                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Tabungan Reguler</p>
-                        <h3 class="text-sm font-bold mt-0.5 text-slate-800 leading-snug" id="stat-total-tabungan">Lihat di Aplikasi AIO Neges</h3>
+                    <div class="flex-1">
+                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Tabungan</p>
+                        <h3 class="text-sm font-bold mt-0.5 text-slate-800">Lihat informasi tabungan</h3>
                     </div>
-                </div>
-
-                <!-- Stat 4: Tabungan Yearbook Saya -->
-                <div class="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-3.5">
-                    <div class="w-11 h-11 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
-                        <i data-lucide="book-image" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Tabungan Yearbook</p>
-                        <h3 class="text-base font-bold mt-0.5 text-slate-800" id="stat-yearbook-saya">-</h3>
-                    </div>
-                </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 shrink-0"></i>
+                </button>
 
                 <!-- Stat 5: Total Hadir Sebulan -->
                 <div class="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-3.5">
@@ -584,34 +563,8 @@
             </section>
 
             <!-- HISTORICAL DATA AREA (ANGGOTA SPECIFIC CARD, KECUALI WALI KELAS) -->
-            <div id="base-historical-section" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="base-historical-section" class="grid grid-cols-1 gap-6 md:max-w-xl">
                 
-                <!-- Card Left: Riwayat Nabung Siswa Aktif -->
-                <div class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
-                    <h3 class="font-bold text-base text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-3">
-                        <i data-lucide="history" class="w-4.5 h-4.5 text-primary-600"></i>
-                        <span>Riwayat Nabung Saya</span>
-                    </h3>
-                    <div class="overflow-hidden border border-slate-100 rounded-xl">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
-                                    <th class="p-3">Tanggal & Waktu</th>
-                                    <th class="p-3 text-center">Sumber</th>
-                                    <th class="p-3 text-center">Tipe</th>
-                                    <th class="p-3 text-right">Nominal</th>
-                                    <th class="p-3">Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody id="siswa-tabungan-riwayat-body" class="divide-y divide-slate-100">
-                                <tr>
-                                    <td colspan="5" class="p-8 text-center text-slate-400 font-medium">Belum ada riwayat transaksi.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
                 <!-- Card Right: Kalender Absensi / Kehadiran Pribadi -->
                 <div class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
                     <h3 class="font-bold text-base text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-3">
@@ -1076,6 +1029,71 @@
         </div>
     </footer>
 
+    <!-- ==================== MODAL TABUNGAN (INFORMASI & LOG) ==================== -->
+    <div id="modal-tabungan-info" class="hidden fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4" onclick="if(event.target===this) closeTabunganModals()">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="wallet" class="w-5 h-5 text-primary-600"></i> Informasi Tabungan
+                </h3>
+                <button type="button" onclick="closeTabunganModals()" class="text-slate-400 hover:text-slate-600" aria-label="Tutup">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-3">
+                    <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="wallet" class="w-4 h-4 text-sky-600"></i> Tabungan Reguler</span>
+                    <span class="text-xs font-bold text-slate-800 text-right" id="stat-total-tabungan">Lihat di Aplikasi AIO Neges</span>
+                </div>
+                <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-3">
+                    <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="palmtree" class="w-4 h-4 text-amber-600"></i> Tabungan Villa</span>
+                    <span class="text-sm font-bold text-slate-800" id="stat-villa-saya">-</span>
+                </div>
+                <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-3">
+                    <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="book-image" class="w-4 h-4 text-purple-600"></i> Tabungan Yearbook</span>
+                    <span class="text-sm font-bold text-slate-800" id="stat-yearbook-saya">-</span>
+                </div>
+            </div>
+            <button type="button" onclick="openTabunganLog()" class="mt-4 w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm py-2.5 rounded-xl flex items-center justify-center gap-2 transition">
+                <i data-lucide="history" class="w-4 h-4"></i> Log Tabungan
+            </button>
+        </div>
+    </div>
+
+    <div id="modal-tabungan-log" class="hidden fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4" onclick="if(event.target===this) closeTabunganModals()">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-5">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="history" class="w-5 h-5 text-primary-600"></i> Log Tabungan
+                </h3>
+                <button type="button" onclick="closeTabunganModals()" class="text-slate-400 hover:text-slate-600" aria-label="Tutup">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="overflow-auto max-h-[60vh] border border-slate-100 rounded-xl">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100 sticky top-0">
+                            <th class="p-3">Tanggal & Waktu</th>
+                            <th class="p-3 text-center">Sumber</th>
+                            <th class="p-3 text-center">Tipe</th>
+                            <th class="p-3 text-right">Nominal</th>
+                            <th class="p-3">Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="siswa-tabungan-riwayat-body" class="divide-y divide-slate-100">
+                        <tr>
+                            <td colspan="5" class="p-8 text-center text-slate-400 font-medium">Belum ada riwayat transaksi.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button type="button" onclick="openTabunganInfo()" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm py-2.5 rounded-xl flex items-center justify-center gap-2 transition">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali
+            </button>
+        </div>
+    </div>
+
     <!-- ==================== JAVASCRIPT & SUPABASE INTEGRATION ==================== -->
     <script>
         // ====================================================================
@@ -1150,24 +1168,42 @@
         }
 
         // ====================================================================
+        // MODAL TABUNGAN: Tombol Tabungan -> Informasi Tabungan -> Log Tabungan
+        // ====================================================================
+        function openTabunganInfo() {
+            document.getElementById('modal-tabungan-log').classList.add('hidden');
+            document.getElementById('modal-tabungan-info').classList.remove('hidden');
+        }
+
+        function openTabunganLog() {
+            document.getElementById('modal-tabungan-info').classList.add('hidden');
+            document.getElementById('modal-tabungan-log').classList.remove('hidden');
+        }
+
+        function closeTabunganModals() {
+            document.getElementById('modal-tabungan-info').classList.add('hidden');
+            document.getElementById('modal-tabungan-log').classList.add('hidden');
+        }
+
+        // ====================================================================
         // KELAS (NON / UTBK) & SERAGAM HARI INI
         // ====================================================================
         // Jadwal seragam per kelas. Kunci hari mengikuti Date.getDay(): 0=Minggu, 1=Senin, ... 6=Sabtu.
         // GANTI isinya sesuai jadwal seragam sekolah kalian yang sebenarnya.
         const SERAGAM_JADWAL = {
             non: {
-                1: { nama: 'PSAS', ket: 'Seragam upacara lengkap (topi & dasi)' },
-                2: { nama: 'Batik', ket: '' },
-                3: { nama: 'Pramuka', ket: '' },
-                4: { nama: 'Daerah', ket: '' },
-                5: { nama: 'Muslim', ket: '' }
+                1: { nama: 'Putih Abu-abu', ket: 'Seragam upacara lengkap (topi & dasi)' },
+                2: { nama: 'Putih Abu-abu', ket: '' },
+                3: { nama: 'Batik', ket: '' },
+                4: { nama: 'Pramuka', ket: '' },
+                5: { nama: 'Muslim / Baju Koko', ket: '' }
             },
             utbk: {
-                1: { nama: 'PSAS', ket: 'Seragam upacara lengkap (topi & dasi)' },
-                2: { nama: 'Batik', ket: '' },
-                3: { nama: 'Pramuka', ket: '' },
-                4: { nama: 'Daerah', ket: '' },
-                5: { nama: 'Muslim', ket: '' }
+                1: { nama: 'Putih Abu-abu', ket: 'Seragam upacara lengkap (topi & dasi)' },
+                2: { nama: 'Putih Abu-abu', ket: '' },
+                3: { nama: 'Batik', ket: '' },
+                4: { nama: 'Pramuka', ket: '' },
+                5: { nama: 'Muslim / Baju Koko', ket: '' }
             }
         };
 
@@ -1332,6 +1368,7 @@
         }
 
         function handleLogout() {
+            closeTabunganModals();
             localStorage.removeItem('siswa_session');
             activeUser = null;
 
@@ -1747,7 +1784,7 @@
                 tr.className = "hover:bg-slate-50 transition";
                 
                 const formattedDate = new Date(item.tanggal).toLocaleString('id-ID', {
-                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                 });
 
                 const badgeBg = item.jenis === 'setor' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
@@ -1763,7 +1800,9 @@
                     <td class="p-3 text-center">
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${badgeBg}">${item.jenis}</span>
                     </td>
-                    <td class="p-3 text-right font-bold ${nominalColor}">${sign} ${formatRupiah(item.nominal)}</td>
+                    ${item.sumber === 'Tabungan'
+                        ? '<td class="p-3 text-right text-[10px] font-semibold text-slate-400">Lihat di Aplikasi AIO Neges</td>'
+                        : `<td class="p-3 text-right font-bold ${nominalColor}">${sign} ${formatRupiah(item.nominal)}</td>`}
                     <td class="p-3 text-slate-500">${item.keterangan || '-'}</td>
                 `;
                 tBody.appendChild(tr);
