@@ -254,6 +254,9 @@
                 </div>
             </header>
 
+            <!-- ===== HALAMAN UTAMA DASHBOARD ===== -->
+            <div id="dash-home" class="flex flex-col gap-6">
+
             <!-- SERAGAM HARI INI (per kelas: NON / UTBK), KECUALI WALI KELAS -->
             <section id="base-seragam-section" class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
                 <div class="flex items-center justify-between gap-3">
@@ -584,6 +587,66 @@
                     </div>
                 </div>
 
+            </div>
+            </div><!-- /dash-home -->
+
+            <!-- ===== HALAMAN: INFORMASI TABUNGAN ===== -->
+            <div id="page-tabungan-info" class="hidden flex flex-col gap-4">
+                <button type="button" onclick="closeTabunganPages()" class="self-start flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-primary-700 transition">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali ke Dashboard
+                </button>
+                <div class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5 md:p-6 max-w-2xl w-full">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-3">
+                        <i data-lucide="wallet" class="w-5 h-5 text-primary-600"></i> Informasi Tabungan
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-4">
+                            <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="wallet" class="w-4 h-4 text-sky-600"></i> Tabungan Reguler</span>
+                            <span class="text-xs font-bold text-slate-800 text-right" id="stat-total-tabungan">Lihat di Aplikasi AIO Neges</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-4">
+                            <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="palmtree" class="w-4 h-4 text-amber-600"></i> Tabungan Villa</span>
+                            <span class="text-sm font-bold text-slate-800" id="stat-villa-saya">-</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-4">
+                            <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="book-image" class="w-4 h-4 text-purple-600"></i> Tabungan Yearbook</span>
+                            <span class="text-sm font-bold text-slate-800" id="stat-yearbook-saya">-</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="openTabunganLog()" class="mt-5 w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm py-3 rounded-xl flex items-center justify-center gap-2 transition">
+                        <i data-lucide="history" class="w-4 h-4"></i> Log Tabungan
+                    </button>
+                </div>
+            </div>
+
+            <!-- ===== HALAMAN: LOG TABUNGAN ===== -->
+            <div id="page-tabungan-log" class="hidden flex flex-col gap-4">
+                <button type="button" onclick="openTabunganInfo()" class="self-start flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-primary-700 transition">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali ke Informasi Tabungan
+                </button>
+                <div class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5 md:p-6 w-full">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-3">
+                        <i data-lucide="history" class="w-5 h-5 text-primary-600"></i> Log Tabungan
+                    </h3>
+                    <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
+                                    <th class="p-3">Tanggal & Waktu</th>
+                                    <th class="p-3 text-center">Sumber</th>
+                                    <th class="p-3 text-center">Tipe</th>
+                                    <th class="p-3 text-right">Nominal</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="siswa-tabungan-riwayat-body" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="5" class="p-8 text-center text-slate-400 font-medium">Belum ada riwayat transaksi.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -1029,71 +1092,6 @@
         </div>
     </footer>
 
-    <!-- ==================== MODAL TABUNGAN (INFORMASI & LOG) ==================== -->
-    <div id="modal-tabungan-info" class="hidden fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4" onclick="if(event.target===this) closeTabunganModals()">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
-            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                    <i data-lucide="wallet" class="w-5 h-5 text-primary-600"></i> Informasi Tabungan
-                </h3>
-                <button type="button" onclick="closeTabunganModals()" class="text-slate-400 hover:text-slate-600" aria-label="Tutup">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div class="space-y-3">
-                <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-3">
-                    <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="wallet" class="w-4 h-4 text-sky-600"></i> Tabungan Reguler</span>
-                    <span class="text-xs font-bold text-slate-800 text-right" id="stat-total-tabungan">Lihat di Aplikasi AIO Neges</span>
-                </div>
-                <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-3">
-                    <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="palmtree" class="w-4 h-4 text-amber-600"></i> Tabungan Villa</span>
-                    <span class="text-sm font-bold text-slate-800" id="stat-villa-saya">-</span>
-                </div>
-                <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-3">
-                    <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="book-image" class="w-4 h-4 text-purple-600"></i> Tabungan Yearbook</span>
-                    <span class="text-sm font-bold text-slate-800" id="stat-yearbook-saya">-</span>
-                </div>
-            </div>
-            <button type="button" onclick="openTabunganLog()" class="mt-4 w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm py-2.5 rounded-xl flex items-center justify-center gap-2 transition">
-                <i data-lucide="history" class="w-4 h-4"></i> Log Tabungan
-            </button>
-        </div>
-    </div>
-
-    <div id="modal-tabungan-log" class="hidden fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4" onclick="if(event.target===this) closeTabunganModals()">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-5">
-            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                    <i data-lucide="history" class="w-5 h-5 text-primary-600"></i> Log Tabungan
-                </h3>
-                <button type="button" onclick="closeTabunganModals()" class="text-slate-400 hover:text-slate-600" aria-label="Tutup">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div class="overflow-auto max-h-[60vh] border border-slate-100 rounded-xl">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100 sticky top-0">
-                            <th class="p-3">Tanggal & Waktu</th>
-                            <th class="p-3 text-center">Sumber</th>
-                            <th class="p-3 text-center">Tipe</th>
-                            <th class="p-3 text-right">Nominal</th>
-                            <th class="p-3">Keterangan</th>
-                        </tr>
-                    </thead>
-                    <tbody id="siswa-tabungan-riwayat-body" class="divide-y divide-slate-100">
-                        <tr>
-                            <td colspan="5" class="p-8 text-center text-slate-400 font-medium">Belum ada riwayat transaksi.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <button type="button" onclick="openTabunganInfo()" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm py-2.5 rounded-xl flex items-center justify-center gap-2 transition">
-                <i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali
-            </button>
-        </div>
-    </div>
-
     <!-- ==================== JAVASCRIPT & SUPABASE INTEGRATION ==================== -->
     <script>
         // ====================================================================
@@ -1170,20 +1168,19 @@
         // ====================================================================
         // MODAL TABUNGAN: Tombol Tabungan -> Informasi Tabungan -> Log Tabungan
         // ====================================================================
-        function openTabunganInfo() {
-            document.getElementById('modal-tabungan-log').classList.add('hidden');
-            document.getElementById('modal-tabungan-info').classList.remove('hidden');
+        function showDashPage(name) {
+            const pages = { home: 'dash-home', info: 'page-tabungan-info', log: 'page-tabungan-log' };
+            Object.entries(pages).forEach(([key, id]) => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('hidden', key !== name);
+            });
+            window.scrollTo({ top: 0 });
+            lucide.createIcons();
         }
 
-        function openTabunganLog() {
-            document.getElementById('modal-tabungan-info').classList.add('hidden');
-            document.getElementById('modal-tabungan-log').classList.remove('hidden');
-        }
-
-        function closeTabunganModals() {
-            document.getElementById('modal-tabungan-info').classList.add('hidden');
-            document.getElementById('modal-tabungan-log').classList.add('hidden');
-        }
+        function openTabunganInfo() { showDashPage('info'); }
+        function openTabunganLog() { showDashPage('log'); }
+        function closeTabunganPages() { showDashPage('home'); }
 
         // ====================================================================
         // KELAS (NON / UTBK) & SERAGAM HARI INI
@@ -1368,7 +1365,7 @@
         }
 
         function handleLogout() {
-            closeTabunganModals();
+            closeTabunganPages();
             localStorage.removeItem('siswa_session');
             activeUser = null;
 
@@ -1754,18 +1751,16 @@
             const tBody = document.getElementById('siswa-tabungan-riwayat-body');
             tBody.innerHTML = '';
 
-            // Ambil riwayat dari 3 sumber tabungan sekaligus: Reguler, Villa, dan Yearbook
-            const [resTabungan, resVilla, resYearbook] = await Promise.all([
-                supabaseClient.from('tabungan').select('*').eq('siswa_id', activeUser.id),
+            // Log hanya untuk Villa dan Yearbook (tabungan Reguler tidak ditampilkan di sini)
+            const [resVilla, resYearbook] = await Promise.all([
                 supabaseClient.from('tabungan_villa').select('*').eq('siswa_id', activeUser.id),
                 supabaseClient.from('tabungan_yearbook').select('*').eq('siswa_id', activeUser.id)
             ]);
 
-            const dataTabungan = (resTabungan.data || []).map(item => ({ ...item, sumber: 'Tabungan' }));
             const dataVilla = (resVilla.data || []).map(item => ({ ...item, sumber: 'Villa' }));
             const dataYearbook = (resYearbook.data || []).map(item => ({ ...item, sumber: 'Yearbook' }));
 
-            const gabungan = [...dataTabungan, ...dataVilla, ...dataYearbook]
+            const gabungan = [...dataVilla, ...dataYearbook]
                 .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
 
             if (gabungan.length === 0) {
@@ -1774,7 +1769,6 @@
             }
 
             const sumberBadge = {
-                Tabungan: 'bg-sky-100 text-sky-700',
                 Villa: 'bg-amber-100 text-amber-700',
                 Yearbook: 'bg-purple-100 text-purple-700'
             };
@@ -1800,9 +1794,7 @@
                     <td class="p-3 text-center">
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${badgeBg}">${item.jenis}</span>
                     </td>
-                    ${item.sumber === 'Tabungan'
-                        ? '<td class="p-3 text-right text-[10px] font-semibold text-slate-400">Lihat di Aplikasi AIO Neges</td>'
-                        : `<td class="p-3 text-right font-bold ${nominalColor}">${sign} ${formatRupiah(item.nominal)}</td>`}
+                    <td class="p-3 text-right font-bold ${nominalColor}">${sign} ${formatRupiah(item.nominal)}</td>
                     <td class="p-3 text-slate-500">${item.keterangan || '-'}</td>
                 `;
                 tBody.appendChild(tr);
