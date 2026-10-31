@@ -54,6 +54,9 @@ function initSupabase() {
 document.addEventListener("DOMContentLoaded", async () => {
     lucide.createIcons();
 
+    // Dibuka ulang/reload saat riwayat masih menyimpan 'halaman panel': bersihkan
+    try { if (history.state && history.state.dashPage) history.replaceState(null, ''); } catch (e) { /* abaikan */ }
+
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('id-ID', options);
 

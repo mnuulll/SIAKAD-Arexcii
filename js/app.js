@@ -16,8 +16,8 @@ function escapeHtml(value) {
 // ====================================================================
 // MODAL TABUNGAN: Tombol Tabungan -> Informasi Tabungan -> Log Tabungan
 // ====================================================================
-function showDashPage(name) {
-    const pages = { home: 'dash-home', info: 'page-tabungan-info', log: 'page-tabungan-log' };
+function showDashPage(name, fromPop = false) {
+    const pages = { home: 'dash-home', info: 'page-tabungan-info', log: 'page-tabungan-log', role: 'page-role' };
     Object.entries(pages).forEach(([key, id]) => {
         const el = document.getElementById(id);
         if (el) el.classList.toggle('hidden', key !== name);
@@ -32,7 +32,22 @@ function showDashPage(name) {
         hideFeatureBubble();
     }
     lucide.createIcons();
+
+    // Tombol Back di HP/browser ikut berfungsi sebagai "kembali ke dashboard"
+    // (maksimal 1 entri riwayat: pindah antar halaman memakai replaceState).
+    if (!fromPop) {
+        if (name !== 'home') {
+            if (history.state && history.state.dashPage) history.replaceState({ dashPage: name }, '');
+            else history.pushState({ dashPage: name }, '');
+        } else if (history.state && history.state.dashPage) {
+            history.back();
+        }
+    }
 }
+
+window.addEventListener('popstate', (e) => {
+    showDashPage(e.state && e.state.dashPage ? e.state.dashPage : 'home', true);
+});
 
 function openTabunganInfo() { showDashPage('info'); }
 function openTabunganLog() { showDashPage('log'); }
@@ -232,47 +247,28 @@ async function showDashboard() {
     const rolePanel = document.getElementById('role-panel');
     hideAllRolePanels();
 
-    if (activeUser.role === 'ketua' || activeUser.role === 'wakil ketua' || activeUser.role === 'admin' || activeUser.role === 'wali_kelas') {
-        // Role ini tetap tampil inline di dashboard (bukan lewat bubble/halaman terpisah)
+    const isKetuaAtauAdmin = ['ketua', 'wakil ketua', 'admin'].includes(activeUser.role);
+
+    if (isKetuaAtauAdmin) {
+        // Ketua / Wakil Ketua / Admin: panel jadi tombol. Menekan tombol membuka halaman panelnya.
+        rolePanel.classList.add('hidden');
+        hideFeatureBubble();
+
+        document.getElementById('role-launcher').classList.remove('hidden');
+        document.getElementById('launch-ketua').classList.remove('hidden');
+        document.getElementById('launch-ketua-title').innerText = getJudulPanelKetua(activeUser.role);
+        document.getElementById('launch-siswa').classList.toggle('hidden', activeUser.role !== 'admin');
+    } else if (activeUser.role === 'wali_kelas') {
+        // Wali Kelas: tetap tampil inline di dashboard (hanya monitoring ringkas)
         rolePanel.classList.remove('hidden');
         hideFeatureBubble();
 
-        const panelTitle = document.getElementById('role-panel-title');
-        const panelIcon = document.getElementById('role-panel-icon');
-        const panelBadge = document.getElementById('role-panel-badge');
-        panelBadge.innerText = activeUser.role.toUpperCase().replace(/_/g, ' ');
-
-        if (activeUser.role === 'ketua' || activeUser.role === 'wakil ketua') {
-            panelTitle.innerText = activeUser.role === 'wakil ketua' ? "Panel Monitor Wakil Ketua Kelas" : "Panel Monitor Ketua Kelas";
-            panelIcon.setAttribute('data-lucide', 'shield-check');
-            document.getElementById('panel-ketua').classList.remove('hidden');
-            await loadKetuaPanel();
-            await loadKetuaPengumumanList();
-            await loadKetuaSubuhRekap();
-        } else if (activeUser.role === 'wali_kelas') {
-            // Wali Kelas: hanya memantau rekap absensi harian, rekap absen subuh,
-            // dan total uang kas. Tidak ada kelola pengumuman, tidak ada kelola siswa.
-            panelTitle.innerText = "Panel Monitor Wali Kelas";
-            panelIcon.setAttribute('data-lucide', 'user-check');
-            document.getElementById('panel-wali-kelas').classList.remove('hidden');
-            await loadWaliKelasPanel();
-            await loadWaliKelasSubuhRekap();
-        } else {
-            panelTitle.innerText = "Panel Admin";
-            panelIcon.setAttribute('data-lucide', 'crown');
-
-            // Admin hanya melihat panel Ketua (monitoring & pengumuman) + Kelola Siswa.
-            // Absensi & tabungan sudah punya bubble & halaman fitur masing-masing.
-            document.getElementById('admin-label-ketua').classList.remove('hidden');
-            document.getElementById('admin-label-siswa').classList.remove('hidden');
-            document.getElementById('panel-ketua').classList.remove('hidden');
-            document.getElementById('panel-admin-siswa').classList.remove('hidden');
-
-            await loadKetuaPanel();
-            await loadKetuaPengumumanList();
-            await loadKetuaSubuhRekap();
-            await loadAdminSiswaPanel();
-        }
+        document.getElementById('role-panel-title').innerText = "Panel Monitor Wali Kelas";
+        document.getElementById('role-panel-icon').setAttribute('data-lucide', 'user-check');
+        document.getElementById('role-panel-badge').innerText = activeUser.role.toUpperCase().replace(/_/g, ' ');
+        document.getElementById('panel-wali-kelas').classList.remove('hidden');
+        await loadWaliKelasPanel();
+        await loadWaliKelasSubuhRekap();
     } else if (FEATURE_ROLE_CONFIG[activeUser.role]) {
         // Sekretaris & bendahara: tidak ada panel inline, cukup bubble melayang
         rolePanel.classList.add('hidden');
@@ -283,6 +279,40 @@ async function showDashboard() {
         hideFeatureBubble();
     }
 
+    lucide.createIcons();
+}
+
+function getJudulPanelKetua(role) {
+    if (role === 'admin') return 'Panel Monitor Kelas';
+    return role === 'wakil ketua' ? 'Panel Monitor Wakil Ketua Kelas' : 'Panel Monitor Ketua Kelas';
+}
+
+// Membuka halaman panel (Ketua / Wakil / Admin). Data dimuat saat halaman dibuka.
+async function openRolePage(which) {
+    if (!activeUser) return;
+    const isKetuaAtauAdmin = ['ketua', 'wakil ketua', 'admin'].includes(activeUser.role);
+    if (!isKetuaAtauAdmin) return;
+    if (which === 'siswa' && activeUser.role !== 'admin') return;   // (penjagaan sebenarnya ada di RLS database)
+
+    const isKetuaPage = which !== 'siswa';
+    document.getElementById('panel-ketua').classList.toggle('hidden', !isKetuaPage);
+    document.getElementById('panel-admin-siswa').classList.toggle('hidden', isKetuaPage);
+
+    const title = isKetuaPage ? getJudulPanelKetua(activeUser.role) : 'Kelola Data Siswa';
+    document.getElementById('page-role-title').innerText = title;
+    document.getElementById('page-role-badge').innerText = activeUser.role.toUpperCase().replace(/_/g, ' ');
+    document.getElementById('page-role-icon-wrap').innerHTML =
+        `<i data-lucide="${isKetuaPage ? 'shield-check' : 'users-round'}" class="w-5 h-5 text-primary-600"></i>`;
+
+    showDashPage('role');
+
+    if (isKetuaPage) {
+        await loadKetuaPanel();
+        await loadKetuaPengumumanList();
+        await loadKetuaSubuhRekap();
+    } else {
+        await loadAdminSiswaPanel();
+    }
     lucide.createIcons();
 }
 
@@ -313,7 +343,12 @@ function hideAllRolePanels() {
     document.getElementById('panel-ketua').classList.add('hidden');
     document.getElementById('panel-wali-kelas').classList.add('hidden');
     document.getElementById('panel-admin-siswa').classList.add('hidden');
-    document.querySelectorAll('.admin-section-label').forEach(el => el.classList.add('hidden'));
+    const launcher = document.getElementById('role-launcher');
+    if (launcher) launcher.classList.add('hidden');
+    ['launch-ketua', 'launch-siswa'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
 
     // Semua "halaman fitur" (sekretaris & bendahara) ditutup kembali ke dashboard
     Object.values(FEATURE_ROLE_CONFIG).forEach(config => {
@@ -743,17 +778,6 @@ async function loadKetuaPanel() {
         });
     }
     document.getElementById('ketua-total-villa').innerText = formatRupiah(totalVillaVal);
-
-    // Tabungan Total
-    const { data: sumTab } = await supabaseClient.from('tabungan').select('nominal, jenis');
-    let totalTabVal = 0;
-    if (sumTab) {
-        sumTab.forEach(t => {
-            if (t.jenis === 'setor') totalTabVal += t.nominal;
-            else if (t.jenis === 'tarik') totalTabVal -= t.nominal;
-        });
-    }
-    document.getElementById('ketua-total-tabungan').innerText = formatRupiah(totalTabVal);
 
     // Tabungan Yearbook Total
     const { data: sumYearbook } = await supabaseClient.from('tabungan_yearbook').select('nominal, jenis');

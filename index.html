@@ -2,7 +2,7 @@
 <html lang="id" class="h-full bg-blue-50">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>SIAKAD - Portal Digital</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,6 +14,16 @@
     <!-- SheetJS (export rekap absensi ke .xlsx) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
+
+    <!-- PWA: bisa dipasang seperti aplikasi -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0369a1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="SIAKAD">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="icons/favicon-64.png">
 </head>
 <body class="h-full text-slate-800 font-sans flex flex-col justify-between">
 
@@ -210,6 +220,32 @@
             </section>
 
             <!-- ROLE SPECIFIC ACTION SECTION (Dynamic Panel depending on Role) -->
+            <!-- TOMBOL PANEL (Ketua / Wakil Ketua / Admin): menekan tombol = pindah ke halaman panelnya -->
+            <section id="role-launcher" class="hidden">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button type="button" id="launch-ketua" onclick="openRolePage('ketua')" class="flex hidden group text-left bg-white rounded-2xl border border-blue-100 shadow-sm hover:shadow-md hover:border-primary-300 active:scale-[0.99] transition p-4 items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
+                            <i data-lucide="shield-check" class="w-6 h-6"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p id="launch-ketua-title" class="font-bold text-slate-800 text-sm">Panel Monitor Ketua Kelas</p>
+                            <p class="text-xs text-slate-400 mt-0.5">Rekap absensi, kondisi finansial, absen subuh, pengumuman</p>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-slate-300 group-hover:text-primary-500 shrink-0"></i>
+                    </button>
+                    <button type="button" id="launch-siswa" onclick="openRolePage('siswa')" class="flex hidden group text-left bg-white rounded-2xl border border-blue-100 shadow-sm hover:shadow-md hover:border-primary-300 active:scale-[0.99] transition p-4 items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                            <i data-lucide="users-round" class="w-6 h-6"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-slate-800 text-sm">Kelola Data Siswa</p>
+                            <p class="text-xs text-slate-400 mt-0.5">Ubah role &amp; kelas, reset PIN siswa</p>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-slate-300 group-hover:text-primary-500 shrink-0"></i>
+                    </button>
+                </div>
+            </section>
+
             <section id="role-panel" class="hidden bg-white rounded-2xl border border-blue-100 shadow-md p-6 relative overflow-hidden">
                 <!-- Background Accent Ribbon -->
                 <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary-600"></div>
@@ -222,10 +258,87 @@
                     <span class="text-xs bg-primary-50 text-primary-700 font-semibold px-2.5 py-1 rounded-full" id="role-panel-badge">ROLE</span>
                 </div>
 
+                <!-- PANEL WALI KELAS: hanya monitoring ringkas (absen harian, absen subuh, total kas) -->
+                <div id="panel-wali-kelas" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Absensi Harian -->
+                        <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                            <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                                <i data-lucide="users" class="w-4 h-4 text-emerald-600"></i> Rekap Absensi Hari Ini
+                            </h4>
+                            <div class="space-y-2 text-sm max-h-[220px] overflow-y-auto pr-2" id="walikelas-absen-list">
+                                <!-- Dynamic List -->
+                            </div>
+                        </div>
+
+                        <!-- Total Uang Kas -->
+                        <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50 flex flex-col justify-center items-center text-center">
+                            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
+                                <i data-lucide="wallet" class="w-6 h-6"></i>
+                            </div>
+                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Uang Kas Kelas</p>
+                            <p class="text-2xl font-bold text-slate-800 mt-1" id="walikelas-total-kas">Rp 0</p>
+                        </div>
+                    </div>
+
+                    <!-- Rekap Absen Sholat Subuh -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3">
+                            <h4 class="font-semibold text-sm flex items-center gap-1.5 text-slate-700 shrink-0">
+                                <i data-lucide="moon-star" class="w-4 h-4 text-indigo-600"></i> Rekap Absen Sholat Subuh
+                            </h4>
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <input type="date" id="walikelas-subuh-tanggal" onchange="loadWaliKelasSubuhRekap()" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500 flex-grow">
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm max-h-[260px] overflow-y-auto pr-2" id="walikelas-subuh-list">
+                            <!-- Dynamic List -->
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- HISTORICAL DATA AREA (ANGGOTA SPECIFIC CARD, KECUALI WALI KELAS) -->
+            <div id="base-historical-section" class="grid grid-cols-1 gap-6 md:max-w-xl">
+                
+                <!-- Card Right: Kalender Absensi / Kehadiran Pribadi -->
+                <div class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
+                    <h3 class="font-bold text-base text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-3">
+                        <i data-lucide="check-square" class="w-4.5 h-4.5 text-primary-600"></i>
+                        <span>Kalender Kehadiran Saya (Bulan Ini)</span>
+                    </h3>
+                    <div id="calendar-view" class="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-500">
+                        <!-- Calendar populated dynamically with dates -->
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-3 items-center justify-center text-[10px] font-bold text-slate-400 pt-3 border-t border-slate-50">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-emerald-500 rounded"></span> Hadir</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-yellow-500 rounded"></span> Ijin</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-sky-500 rounded"></span> Sakit</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-purple-500 rounded"></span> Dispen</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-rose-500 rounded"></span> Alpha</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-slate-100 rounded border border-slate-200"></span> Belum Absen</span>
+                    </div>
+                </div>
+
+            </div>
+            </div><!-- /dash-home -->
+
+            <!-- ===== HALAMAN: PANEL KETUA / WAKIL / ADMIN ===== -->
+            <div id="page-role" class="hidden flex flex-col gap-4">
+                <button type="button" onclick="closeTabunganPages()" class="self-start flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-primary-700 transition">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali ke Dashboard
+                </button>
+                <section class="bg-white rounded-2xl border border-blue-100 shadow-md p-6 relative overflow-hidden">
+                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary-600"></div>
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+                        <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+                            <span id="page-role-icon-wrap" class="flex items-center"></span>
+                            <span id="page-role-title">Panel</span>
+                        </h3>
+                        <span class="text-xs bg-primary-50 text-primary-700 font-semibold px-2.5 py-1 rounded-full" id="page-role-badge">ROLE</span>
+                    </div>
                 <!-- 1. KETUA PANEL -->
-                <h3 id="admin-label-ketua" class="admin-section-label hidden text-xs font-bold text-slate-400 uppercase tracking-wider mt-2 mb-1 flex items-center gap-1.5">
-                    <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Ketua / Wakil Kelas
-                </h3>
                 <div id="panel-ketua" class="hidden space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Absensi Summary -->
@@ -250,14 +363,10 @@
                                         <p class="text-base font-bold text-slate-800" id="ketua-total-villa">Rp 0</p>
                                     </div>
                                     <div class="bg-white p-3 rounded-xl border border-slate-100">
-                                        <p class="text-[11px] text-slate-400 font-medium">Tabungan Terkumpul</p>
-                                        <p class="text-base font-bold text-slate-800" id="ketua-total-tabungan">Rp 0</p>
-                                    </div>
-                                    <div class="bg-white p-3 rounded-xl border border-slate-100">
                                         <p class="text-[11px] text-slate-400 font-medium">Tabungan Yearbook Terkumpul</p>
                                         <p class="text-base font-bold text-slate-800" id="ketua-total-yearbook">Rp 0</p>
                                     </div>
-                                    <div class="bg-white p-3 rounded-xl border border-slate-100">
+                                    <div class="bg-white p-3 rounded-xl border border-slate-100 col-span-2">
                                         <p class="text-[11px] text-slate-400 font-medium">Tabungan Kas Terkumpul</p>
                                         <p class="text-base font-bold text-slate-800" id="ketua-total-kas">Rp 0</p>
                                     </div>
@@ -335,49 +444,8 @@
                     </div>
                 </div>
 
-                <!-- PANEL WALI KELAS: hanya monitoring ringkas (absen harian, absen subuh, total kas) -->
-                <div id="panel-wali-kelas" class="hidden space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Absensi Harian -->
-                        <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
-                            <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
-                                <i data-lucide="users" class="w-4 h-4 text-emerald-600"></i> Rekap Absensi Hari Ini
-                            </h4>
-                            <div class="space-y-2 text-sm max-h-[220px] overflow-y-auto pr-2" id="walikelas-absen-list">
-                                <!-- Dynamic List -->
-                            </div>
-                        </div>
-
-                        <!-- Total Uang Kas -->
-                        <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50 flex flex-col justify-center items-center text-center">
-                            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
-                                <i data-lucide="wallet" class="w-6 h-6"></i>
-                            </div>
-                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Uang Kas Kelas</p>
-                            <p class="text-2xl font-bold text-slate-800 mt-1" id="walikelas-total-kas">Rp 0</p>
-                        </div>
-                    </div>
-
-                    <!-- Rekap Absen Sholat Subuh -->
-                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
-                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3">
-                            <h4 class="font-semibold text-sm flex items-center gap-1.5 text-slate-700 shrink-0">
-                                <i data-lucide="moon-star" class="w-4 h-4 text-indigo-600"></i> Rekap Absen Sholat Subuh
-                            </h4>
-                            <div class="flex items-center gap-2 w-full sm:w-auto">
-                                <input type="date" id="walikelas-subuh-tanggal" onchange="loadWaliKelasSubuhRekap()" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500 flex-grow">
-                            </div>
-                        </div>
-                        <div class="space-y-2 text-sm max-h-[260px] overflow-y-auto pr-2" id="walikelas-subuh-list">
-                            <!-- Dynamic List -->
-                        </div>
-                    </div>
-                </div>
 
                 <!-- 7. ADMIN: KELOLA SISWA PANEL -->
-                <h3 id="admin-label-siswa" class="admin-section-label hidden text-xs font-bold text-slate-400 uppercase tracking-wider mt-4 mb-1 flex items-center gap-1.5">
-                    <i data-lucide="users-round" class="w-3.5 h-3.5"></i> Kelola Data Siswa
-                </h3>
                 <div id="panel-admin-siswa" class="hidden space-y-4">
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
                         <label class="block text-xs font-semibold text-slate-500 mb-1.5">Pilih Siswa</label>
@@ -426,32 +494,8 @@
                     </div>
                 </div>
 
-            </section>
-
-            <!-- HISTORICAL DATA AREA (ANGGOTA SPECIFIC CARD, KECUALI WALI KELAS) -->
-            <div id="base-historical-section" class="grid grid-cols-1 gap-6 md:max-w-xl">
-                
-                <!-- Card Right: Kalender Absensi / Kehadiran Pribadi -->
-                <div class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
-                    <h3 class="font-bold text-base text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-3">
-                        <i data-lucide="check-square" class="w-4.5 h-4.5 text-primary-600"></i>
-                        <span>Kalender Kehadiran Saya (Bulan Ini)</span>
-                    </h3>
-                    <div id="calendar-view" class="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-500">
-                        <!-- Calendar populated dynamically with dates -->
-                    </div>
-                    <div class="mt-4 flex flex-wrap gap-3 items-center justify-center text-[10px] font-bold text-slate-400 pt-3 border-t border-slate-50">
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-emerald-500 rounded"></span> Hadir</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-yellow-500 rounded"></span> Ijin</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-sky-500 rounded"></span> Sakit</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-purple-500 rounded"></span> Dispen</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-rose-500 rounded"></span> Alpha</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-slate-100 rounded border border-slate-200"></span> Belum Absen</span>
-                    </div>
-                </div>
-
+                </section>
             </div>
-            </div><!-- /dash-home -->
 
             <!-- ===== HALAMAN: INFORMASI TABUNGAN ===== -->
             <div id="page-tabungan-info" class="hidden flex flex-col gap-4">
@@ -996,5 +1040,6 @@
     <script src="js/config.js"></script>
     <script src="js/app.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/pwa.js"></script>
 </body>
 </html>
