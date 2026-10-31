@@ -1,0 +1,119 @@
+/* Tombol kotak kecil bergaya ikon aplikasi (sisa util, dipakai di tempat lain jika perlu) */
+.feature-tile-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+}
+.feature-tile-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+}
+@keyframes tile-spin {
+    to { transform: rotate(360deg); }
+}
+.feature-tile-icon.is-spinning {
+    animation: tile-spin 0.6s linear infinite;
+}
+
+/* ============ HALAMAN FITUR (feature-page) ============
+   Menutupi seluruh layar seperti "pindah halaman", terpisah dari dashboard di belakangnya. */
+.feature-page {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: #f8fafc; /* slate-50 */
+    overflow-y: auto;
+    animation: feature-page-in 220ms ease-out;
+}
+.feature-page.hidden { display: none; }
+@keyframes feature-page-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.feature-page-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    background: rgba(248, 250, 252, 0.92);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid #e2e8f0;
+}
+.feature-back-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 9999px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: transform 150ms ease, background-color 150ms ease;
+    flex-shrink: 0;
+}
+.feature-back-btn:hover { background: #f1f5f9; }
+.feature-back-btn:active { transform: scale(0.88); }
+.feature-page-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+.feature-page-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.feature-page-body {
+    padding: 1rem;
+}
+@media (min-width: 768px) {
+    .feature-page-body { padding: 2rem; }
+}
+
+/* ============ BUBBLE MELAYANG (draggable, seperti chat head) ============ */
+#feature-bubble {
+    position: fixed;
+    z-index: 40;
+    width: 3.75rem;
+    height: 3.75rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    border: none;
+    box-shadow: 0 10px 25px -6px rgba(2, 132, 199, 0.5), 0 4px 10px -2px rgba(0,0,0,0.15);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    transition: transform 150ms ease, box-shadow 150ms ease;
+}
+#feature-bubble.hidden { display: none; }
+#feature-bubble:active {
+    cursor: grabbing;
+}
+#feature-bubble.is-dragging {
+    transform: scale(1.08);
+    box-shadow: 0 14px 30px -6px rgba(2, 132, 199, 0.6), 0 6px 14px -2px rgba(0,0,0,0.2);
+    transition: none;
+}
+#feature-bubble.is-tapped {
+    transform: scale(0.85);
+}
+#feature-bubble-icon {
+    width: 1.6rem;
+    height: 1.6rem;
+}
+#feature-bubble-icon.is-spinning {
+    animation: tile-spin 0.6s linear infinite;
+}
