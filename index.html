@@ -106,6 +106,10 @@
                             <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-400/30 ml-1" id="user-display-kelas">Belum diatur</span>
                         </div>
                     </div>
+                    <button onclick="openChangePinModal()" class="bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 hover:border-sky-500/30 text-sky-200 hover:text-white px-3 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition">
+                        <i data-lucide="key-round" class="w-4 h-4"></i>
+                        <span>Ganti PIN</span>
+                    </button>
                     <button onclick="handleLogout()" class="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 text-red-300 hover:text-white px-3 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition">
                         <i data-lucide="log-out" class="w-4 h-4"></i>
                         <span>Keluar</span>
@@ -953,6 +957,40 @@
             <p>© 2026 Created by Mnuulll.</p>
         </div>
     </footer>
+
+    <!-- ==================== MODAL GANTI PIN ==================== -->
+    <div id="pin-modal" class="hidden fixed inset-0 z-[100] bg-slate-900/60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="key-round" class="w-5 h-5 text-primary-600"></i> Ganti PIN
+                </h3>
+                <button type="button" onclick="closeChangePinModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">PIN lama</label>
+                    <input type="password" id="pin-lama" maxlength="6" inputmode="numeric" autocomplete="current-password" placeholder="******" class="w-full bg-slate-50 border border-slate-200 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 tracking-[0.5em] text-center font-bold">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">PIN baru (6 angka)</label>
+                    <input type="password" id="pin-baru" maxlength="6" inputmode="numeric" autocomplete="new-password" placeholder="******" class="w-full bg-slate-50 border border-slate-200 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 tracking-[0.5em] text-center font-bold">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ulangi PIN baru</label>
+                    <input type="password" id="pin-baru2" maxlength="6" inputmode="numeric" autocomplete="new-password" placeholder="******" class="w-full bg-slate-50 border border-slate-200 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 tracking-[0.5em] text-center font-bold">
+                </div>
+                <p id="pin-modal-error" class="hidden text-xs font-semibold text-red-500"></p>
+                <p class="text-[10px] text-slate-400">Jangan pakai 123456 atau angka yang sama semua. Perangkat lain yang sedang login akan otomatis keluar.</p>
+            </div>
+            <div class="flex gap-2 mt-5">
+                <button type="button" onclick="closeChangePinModal()" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition">Batal</button>
+                <button type="button" id="pin-submit-btn" onclick="submitChangePin()" class="flex-1 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm transition">Simpan PIN</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ==================== JAVASCRIPT ==================== -->
     <script src="js/config.js"></script>
