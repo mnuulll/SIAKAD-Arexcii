@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-blue-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIAKAD - Portal Digital</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/tailwind-config.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase Client JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- SheetJS (export rekap absensi ke .xlsx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="h-full text-slate-800 font-sans flex flex-col justify-between">
+
+    <!-- SETUP CONFIGURATION WARNING (Floating Alert) -->
+    <div id="config-warning" class="bg-amber-500 text-white text-center py-2 px-4 text-xs font-semibold flex items-center justify-center gap-2 shadow-inner">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+        <span>Supabase belum dikoneksikan! Silakan buka file HTML ini dan isi <code>SUPABASE_URL</code> serta <code>SUPABASE_ANON_KEY</code> di bagian paling bawah tag script.</span>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow flex items-center justify-center p-4 md:p-8">
+        
+        <!-- ==================== VIEW 1: LOGIN PAGE ==================== -->
+        <div id="login-card" class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden transition-all duration-300 transform scale-100">
+            <!-- Header Banner -->
+            <div class="bg-gradient-to-r from-primary-800 to-primary-600 px-6 py-8 text-center text-white relative">
+                <div class="absolute -right-8 -top-8 w-24 h-24 bg-primary-500 rounded-full opacity-20 blur-xl"></div>
+                <div class="absolute -left-6 -bottom-6 w-20 h-20 bg-sky-300 rounded-full opacity-20 blur-lg"></div>
+                <div class="mx-auto w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mb-3 border border-white/20">
+                    <i data-lucide="graduation-cap" class="w-8 h-8 text-white"></i>
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight">Portal Digital Kelas</h1>
+                <p class="text-primary-100 text-xs mt-1">Sistem Terintegrasi Absensi, Tabungan & Tabungan Villa</p>
+            </div>
+
+            <!-- Form Area -->
+            <div class="p-6 md:p-8 space-y-6">
+                <!-- Dropdown Pilih Nama -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                        <i data-lucide="user" class="w-3.5 h-3.5 text-primary-600"></i> Pilih Nama Siswa
+                    </label>
+                    <div class="relative">
+                        <select id="login-siswa" class="w-full bg-slate-50 border border-slate-200 text-slate-800 py-3 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none font-medium transition duration-200 cursor-pointer">
+                            <option value="" disabled selected>Memuat nama siswa...</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                            <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input PIN -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                        <i data-lucide="lock" class="w-3.5 h-3.5 text-primary-600"></i> Masukkan PIN Login
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="login-pin" maxlength="6" placeholder="******" class="w-full bg-slate-50 border border-slate-200 text-slate-800 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 tracking-[0.5em] text-center font-bold text-lg transition duration-200">
+                        <button type="button" onclick="togglePinVisibility()" class="absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 hover:text-slate-600">
+                            <i id="pin-eye-icon" data-lucide="eye" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">Lupa PIN? Tanyakan ke manul.</p>
+                </div>
+
+                <!-- Action Button -->
+                <button onclick="handleLogin()" class="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white py-3.5 rounded-xl font-bold shadow-md hover:shadow-lg shadow-primary-500/10 hover:shadow-primary-500/20 transition duration-200 flex items-center justify-center gap-2 text-sm tracking-wide">
+                    <span>Masuk Ke Dashboard</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+
+        <!-- ==================== VIEW 2: DASHBOARD MAIN PAGE (Hidden by Default) ==================== -->
+        <div id="dashboard-view" class="hidden w-full max-w-6xl flex flex-col gap-6 animate-fade-in">
+            
+            <!-- NAVBAR PORTAL -->
+            <header class="bg-gradient-to-r from-primary-900 to-primary-800 rounded-2xl shadow-xl text-white px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border border-primary-950/20">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
+                        <i data-lucide="graduation-cap" class="w-6 h-6 text-sky-300"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-lg leading-tight" id="dash-class-name">SIAKAD Arexcii</h2>
+                        <p class="text-xs text-sky-200 font-medium flex items-center gap-1">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5"></i> <span id="current-date-display">16 Juli 2026</span>
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Profile & Logout -->
+                <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end border-t border-white/10 pt-3 sm:border-t-0 sm:pt-0">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-primary-700 flex items-center justify-center text-sm font-bold text-sky-300 uppercase" id="user-avatar-text">SI</div>
+                        <div class="text-left">
+                            <h4 class="font-semibold text-sm leading-tight" id="user-display-name">Nama Siswa</h4>
+                            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-200 border border-sky-500/30" id="user-display-role">Anggota</span>
+                            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-400/30 ml-1" id="user-display-kelas">Belum diatur</span>
+                        </div>
+                    </div>
+                    <button onclick="handleLogout()" class="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 text-red-300 hover:text-white px-3 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                        <span>Keluar</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- ===== HALAMAN UTAMA DASHBOARD ===== -->
+            <div id="dash-home" class="flex flex-col gap-6">
+
+            <!-- SERAGAM HARI INI (per kelas: NON / UTBK), KECUALI WALI KELAS -->
+            <section id="base-seragam-section" class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-primary-50 text-primary-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i data-lucide="shirt" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Seragam Hari Ini <span id="seragam-hari" class="normal-case"></span></p>
+                            <h3 class="text-base font-bold text-slate-800 leading-snug" id="seragam-nama">-</h3>
+                            <p class="text-xs text-slate-500 mt-0.5" id="seragam-ket"></p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0" id="seragam-kelas-badge">Belum diatur</span>
+                </div>
+            </section>
+
+            <!-- PAPAN PENGUMUMAN & TUGAS (TAMPIL UNTUK SEMUA ROLE KECUALI WALI KELAS) -->
+            <section id="base-pengumuman-section" class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
+                <div class="flex items-center gap-2 mb-3">
+                    <i data-lucide="megaphone" class="w-5 h-5 text-primary-600"></i>
+                    <h3 class="font-bold text-slate-800 text-sm">Papan Pengumuman / Tugas</h3>
+                </div>
+                <div id="pengumuman-board-list" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    <!-- Dynamic items -->
+                </div>
+            </section>
+
+            <!-- STATS BLOCK (FOR ALL USERS / ANGGOTA BASE VIEW, KECUALI WALI KELAS) -->
+            <section id="base-stats-section" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Stat 1: Absen Hari ini -->
+                <div class="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-3.5">
+                    <div class="w-11 h-11 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Absen Hari Ini</p>
+                        <h3 class="text-base font-bold mt-0.5" id="stat-absen-hari-ini">-</h3>
+                    </div>
+                </div>
+
+                <!-- Stat 2: Tombol Tabungan (membuka modal informasi tabungan) -->
+                <button type="button" onclick="openTabunganInfo()" class="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-3.5 text-left hover:border-primary-300 hover:shadow-md transition w-full">
+                    <div class="w-11 h-11 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center shrink-0">
+                        <i data-lucide="wallet" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Tabungan</p>
+                        <h3 class="text-sm font-bold mt-0.5 text-slate-800">Lihat informasi tabungan</h3>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 shrink-0"></i>
+                </button>
+
+                <!-- Stat 5: Total Hadir Sebulan -->
+                <div class="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-3.5">
+                    <div class="w-11 h-11 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                        <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Kehadiran (Bulan Ini)</p>
+                        <h3 class="text-base font-bold mt-0.5" id="stat-total-hadir-bulan">-</h3>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABSEN SHOLAT SUBUH (TAMPIL & BISA DIPENCET OLEH SEMUA SISWA, KECUALI WALI KELAS) -->
+            <section id="base-subuh-section" class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
+                <div class="flex items-center gap-2 mb-3">
+                    <i data-lucide="moon-star" class="w-5 h-5 text-indigo-600"></i>
+                    <h3 class="font-bold text-slate-800 text-sm">Absen Sholat Subuh</h3>
+                </div>
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                    <div class="text-center sm:text-left">
+                        <p class="text-[11px] text-indigo-500 font-semibold uppercase tracking-wider">Status Hari Ini</p>
+                        <h3 class="text-lg font-bold mt-0.5 text-indigo-900" id="subuh-status-text">Memuat...</h3>
+                        <p class="text-[11px] text-indigo-400 mt-1" id="subuh-window-info">Absen dibuka 03:30 - 05:00</p>
+                    </div>
+                    <button id="btn-absen-subuh" onclick="absenSubuh()" disabled class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-5 py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 shadow shrink-0">
+                        <i data-lucide="hand" class="w-4 h-4"></i> <span id="btn-absen-subuh-label">Memuat...</span>
+                    </button>
+                </div>
+                <p class="text-[10px] text-slate-400 italic mt-2 flex items-center gap-1">
+                    <i data-lucide="info" class="w-3 h-3"></i>
+                    Nilai: <span class="font-semibold text-slate-500">A</span> (03.30–04.00),
+                    <span class="font-semibold text-slate-500">B</span> (04.00–04.30),
+                    <span class="font-semibold text-slate-500">C</span> (04.30–05.00).
+                </p>
+            </section>
+
+            <!-- ROLE SPECIFIC ACTION SECTION (Dynamic Panel depending on Role) -->
+            <section id="role-panel" class="hidden bg-white rounded-2xl border border-blue-100 shadow-md p-6 relative overflow-hidden">
+                <!-- Background Accent Ribbon -->
+                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary-600"></div>
+                
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+                    <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+                        <i id="role-panel-icon" data-lucide="settings" class="w-5 h-5 text-primary-600"></i>
+                        <span id="role-panel-title">Panel Kontrol</span>
+                    </h3>
+                    <span class="text-xs bg-primary-50 text-primary-700 font-semibold px-2.5 py-1 rounded-full" id="role-panel-badge">ROLE</span>
+                </div>
+
+                <!-- 1. KETUA PANEL -->
+                <h3 id="admin-label-ketua" class="admin-section-label hidden text-xs font-bold text-slate-400 uppercase tracking-wider mt-2 mb-1 flex items-center gap-1.5">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Ketua / Wakil Kelas
+                </h3>
+                <div id="panel-ketua" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Absensi Summary -->
+                        <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                            <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                                <i data-lucide="users" class="w-4 h-4 text-emerald-600"></i> Rekap Absensi Hari Ini
+                            </h4>
+                            <div class="space-y-2 text-sm max-h-[220px] overflow-y-auto pr-2" id="ketua-absen-list">
+                                <!-- Dynamic List -->
+                            </div>
+                        </div>
+
+                        <!-- Finance Class Summary -->
+                        <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50 flex flex-col justify-between">
+                            <div>
+                                <h4 class="font-semibold text-sm mb-4 flex items-center gap-1.5 text-slate-700">
+                                    <i data-lucide="dollar-sign" class="w-4 h-4 text-primary-600"></i> Kondisi Finansial Kelas
+                                </h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-white p-3 rounded-xl border border-slate-100">
+                                        <p class="text-[11px] text-slate-400 font-medium">Tabungan Villa Terkumpul</p>
+                                        <p class="text-base font-bold text-slate-800" id="ketua-total-villa">Rp 0</p>
+                                    </div>
+                                    <div class="bg-white p-3 rounded-xl border border-slate-100">
+                                        <p class="text-[11px] text-slate-400 font-medium">Tabungan Terkumpul</p>
+                                        <p class="text-base font-bold text-slate-800" id="ketua-total-tabungan">Rp 0</p>
+                                    </div>
+                                    <div class="bg-white p-3 rounded-xl border border-slate-100">
+                                        <p class="text-[11px] text-slate-400 font-medium">Tabungan Yearbook Terkumpul</p>
+                                        <p class="text-base font-bold text-slate-800" id="ketua-total-yearbook">Rp 0</p>
+                                    </div>
+                                    <div class="bg-white p-3 rounded-xl border border-slate-100">
+                                        <p class="text-[11px] text-slate-400 font-medium">Tabungan Kas Terkumpul</p>
+                                        <p class="text-base font-bold text-slate-800" id="ketua-total-kas">Rp 0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-slate-200/50 text-xs text-slate-400 italic flex items-center gap-1">
+                                <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                                Sebagai Ketua/Wakil, Anda memiliki hak penuh untuk memantau aktivitas kelas.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rekap Absen Sholat Subuh -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3">
+                            <h4 class="font-semibold text-sm flex items-center gap-1.5 text-slate-700 shrink-0">
+                                <i data-lucide="moon-star" class="w-4 h-4 text-indigo-600"></i> Rekap Absen Sholat Subuh
+                            </h4>
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <input type="date" id="subuh-rekap-tanggal" onchange="loadKetuaSubuhRekap()" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500 flex-grow">
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm max-h-[260px] overflow-y-auto pr-2" id="ketua-subuh-list">
+                            <!-- Dynamic List -->
+                        </div>
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-100 mt-3">
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <span class="text-xs font-semibold text-slate-500 shrink-0">Rekap Bulan:</span>
+                                <input type="month" id="subuh-rekap-bulan" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500">
+                            </div>
+                            <button onclick="downloadRekapSubuh()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-4 py-2 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 shadow">
+                                <i data-lucide="download" class="w-4 h-4"></i> Download Rekap Subuh (Excel)
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-slate-400 italic mt-2 flex items-center gap-1">
+                            <i data-lucide="info" class="w-3 h-3"></i> Download rekap hanya tersedia untuk Ketua, Wakil Ketua, dan Admin.
+                        </p>
+                    </div>
+
+                    <!-- Kelola Pengumuman & Tugas -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="megaphone" class="w-4 h-4 text-amber-600"></i> Kelola Pengumuman & Tugas
+                        </h4>
+                        <form id="form-pengumuman" onsubmit="submitPengumuman(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-white p-3 rounded-lg border border-slate-100 mb-4">
+                            <div class="md:col-span-1">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis</label>
+                                <select id="peng-jenis" onchange="toggleDeadlineField()" class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                    <option value="Pengumuman">Pengumuman</option>
+                                    <option value="Tugas">Tugas</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Judul</label>
+                                <input type="text" id="peng-judul" required placeholder="Judul singkat..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                            </div>
+                            <div id="peng-deadline-wrapper" class="md:col-span-1 hidden">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Deadline</label>
+                                <input type="date" id="peng-deadline" class="w-full bg-white border border-slate-200 py-[7px] px-3 rounded-lg text-sm focus:ring-primary-500">
+                            </div>
+                            <div class="md:col-span-4">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Isi / Detail</label>
+                                <div class="flex gap-2">
+                                    <textarea id="peng-isi" required rows="2" placeholder="Detail pengumuman atau tugas..." class="flex-grow bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500"></textarea>
+                                    <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs shrink-0 transition flex items-center gap-1 h-fit shadow">
+                                        <i data-lucide="plus" class="w-4 h-4"></i> Tambah
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <div id="ketua-pengumuman-list" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                            <!-- Dynamic list dengan tombol hapus -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANEL WALI KELAS: hanya monitoring ringkas (absen harian, absen subuh, total kas) -->
+                <div id="panel-wali-kelas" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Absensi Harian -->
+                        <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                            <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                                <i data-lucide="users" class="w-4 h-4 text-emerald-600"></i> Rekap Absensi Hari Ini
+                            </h4>
+                            <div class="space-y-2 text-sm max-h-[220px] overflow-y-auto pr-2" id="walikelas-absen-list">
+                                <!-- Dynamic List -->
+                            </div>
+                        </div>
+
+                        <!-- Total Uang Kas -->
+                        <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50 flex flex-col justify-center items-center text-center">
+                            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
+                                <i data-lucide="wallet" class="w-6 h-6"></i>
+                            </div>
+                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Uang Kas Kelas</p>
+                            <p class="text-2xl font-bold text-slate-800 mt-1" id="walikelas-total-kas">Rp 0</p>
+                        </div>
+                    </div>
+
+                    <!-- Rekap Absen Sholat Subuh -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3">
+                            <h4 class="font-semibold text-sm flex items-center gap-1.5 text-slate-700 shrink-0">
+                                <i data-lucide="moon-star" class="w-4 h-4 text-indigo-600"></i> Rekap Absen Sholat Subuh
+                            </h4>
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <input type="date" id="walikelas-subuh-tanggal" onchange="loadWaliKelasSubuhRekap()" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500 flex-grow">
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm max-h-[260px] overflow-y-auto pr-2" id="walikelas-subuh-list">
+                            <!-- Dynamic List -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. ADMIN: KELOLA SISWA PANEL -->
+                <h3 id="admin-label-siswa" class="admin-section-label hidden text-xs font-bold text-slate-400 uppercase tracking-wider mt-4 mb-1 flex items-center gap-1.5">
+                    <i data-lucide="users-round" class="w-3.5 h-3.5"></i> Kelola Data Siswa
+                </h3>
+                <div id="panel-admin-siswa" class="hidden space-y-4">
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Pilih Siswa</label>
+                        <select id="admin-pilih-siswa" onchange="loadSelectedSiswaEditor()" class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                            <option value="" disabled selected>Pilih nama siswa...</option>
+                        </select>
+
+                        <!-- Muncul setelah nama dipilih -->
+                        <div id="admin-siswa-editor" class="hidden mt-4 pt-4 border-t border-slate-200 space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Role</label>
+                                <select id="admin-edit-role" class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                    <option value="anggota">Anggota</option>
+                                    <option value="ketua">Ketua</option>
+                                    <option value="wakil ketua">Wakil Ketua</option>
+                                    <option value="sekretaris">Sekretaris</option>
+                                    <option value="bendahara_tabungan_villa">Bendahara Tabungan Villa</option>
+                                    <option value="bendahara_tabungan">Bendahara Tabungan</option>
+                                    <option value="bendahara_tabungan_yearbook">Bendahara Tabungan Yearbook</option>
+                                    <option value="bendahara_tabungan_kas">Bendahara Tabungan Kas</option>
+                                    <option value="wali_kelas">Wali Kelas</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Kelas</label>
+                                <select id="admin-edit-kelas" class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                    <option value="">Belum diatur</option>
+                                    <option value="non">NON</option>
+                                    <option value="utbk">UTBK</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end justify-between gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">PIN</label>
+                                    <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg py-2 px-3">
+                                        <span class="font-mono tracking-widest text-slate-400">••••••</span>
+                                        <button type="button" onclick="resetSiswaPin()" class="text-primary-600 hover:text-primary-800 text-[11px] font-bold underline whitespace-nowrap">Reset PIN</button>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="simpanRoleSiswa()" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
+                                    <i data-lucide="save" class="w-4 h-4"></i> Simpan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- HISTORICAL DATA AREA (ANGGOTA SPECIFIC CARD, KECUALI WALI KELAS) -->
+            <div id="base-historical-section" class="grid grid-cols-1 gap-6 md:max-w-xl">
+                
+                <!-- Card Right: Kalender Absensi / Kehadiran Pribadi -->
+                <div class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
+                    <h3 class="font-bold text-base text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-3">
+                        <i data-lucide="check-square" class="w-4.5 h-4.5 text-primary-600"></i>
+                        <span>Kalender Kehadiran Saya (Bulan Ini)</span>
+                    </h3>
+                    <div id="calendar-view" class="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-slate-500">
+                        <!-- Calendar populated dynamically with dates -->
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-3 items-center justify-center text-[10px] font-bold text-slate-400 pt-3 border-t border-slate-50">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-emerald-500 rounded"></span> Hadir</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-yellow-500 rounded"></span> Ijin</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-sky-500 rounded"></span> Sakit</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-purple-500 rounded"></span> Dispen</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-rose-500 rounded"></span> Alpha</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-slate-100 rounded border border-slate-200"></span> Belum Absen</span>
+                    </div>
+                </div>
+
+            </div>
+            </div><!-- /dash-home -->
+
+            <!-- ===== HALAMAN: INFORMASI TABUNGAN ===== -->
+            <div id="page-tabungan-info" class="hidden flex flex-col gap-4">
+                <button type="button" onclick="closeTabunganPages()" class="self-start flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-primary-700 transition">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali ke Dashboard
+                </button>
+                <div class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5 md:p-6 max-w-2xl w-full">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-3">
+                        <i data-lucide="wallet" class="w-5 h-5 text-primary-600"></i> Informasi Tabungan
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-4">
+                            <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="wallet" class="w-4 h-4 text-sky-600"></i> Tabungan Reguler</span>
+                            <span class="text-xs font-bold text-slate-800 text-right" id="stat-total-tabungan">Lihat di Aplikasi AIO Neges</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-4">
+                            <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="palmtree" class="w-4 h-4 text-amber-600"></i> Tabungan Villa</span>
+                            <span class="text-sm font-bold text-slate-800" id="stat-villa-saya">-</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-3 bg-slate-50 rounded-xl p-4">
+                            <span class="flex items-center gap-2 text-sm font-semibold text-slate-600"><i data-lucide="book-image" class="w-4 h-4 text-purple-600"></i> Tabungan Yearbook</span>
+                            <span class="text-sm font-bold text-slate-800" id="stat-yearbook-saya">-</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="openTabunganLog()" class="mt-5 w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm py-3 rounded-xl flex items-center justify-center gap-2 transition">
+                        <i data-lucide="history" class="w-4 h-4"></i> Log Tabungan
+                    </button>
+                </div>
+            </div>
+
+            <!-- ===== HALAMAN: LOG TABUNGAN ===== -->
+            <div id="page-tabungan-log" class="hidden flex flex-col gap-4">
+                <button type="button" onclick="openTabunganInfo()" class="self-start flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-primary-700 transition">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali ke Informasi Tabungan
+                </button>
+                <div class="bg-white rounded-2xl border border-blue-100 shadow-sm p-5 md:p-6 w-full">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-3">
+                        <i data-lucide="history" class="w-5 h-5 text-primary-600"></i> Log Tabungan
+                    </h3>
+                    <div class="flex gap-2 mb-4">
+                        <button type="button" id="log-tab-villa" onclick="setLogTabunganSumber('Villa')" class="flex-1 sm:flex-none px-5 py-2 rounded-lg border text-sm font-semibold transition bg-amber-500 text-white border-amber-500">Villa</button>
+                        <button type="button" id="log-tab-yearbook" onclick="setLogTabunganSumber('Yearbook')" class="flex-1 sm:flex-none px-5 py-2 rounded-lg border text-sm font-semibold transition bg-white text-slate-500 border-slate-200 hover:bg-slate-50">Yearbook</button>
+                    </div>
+                    <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
+                                    <th class="p-3">Tanggal & Waktu</th>
+                                    <th class="p-3 text-center">Tipe</th>
+                                    <th class="p-3 text-right">Nominal</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="siswa-tabungan-riwayat-body" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="4" class="p-8 text-center text-slate-400 font-medium">Belum ada riwayat tabungan.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- ==================== HALAMAN FITUR KHUSUS (SEKRETARIS & BENDAHARA) ====================
+         Ditampilkan sebagai "halaman" tersendiri yang menutupi layar (bukan inline di dashboard),
+         dibuka lewat bubble melayang di pojok, dan punya tombol Kembali di kiri atas. ==================== -->
+                <!-- PANEL SEKRETARIS (halaman penuh, dibuka dari bubble melayang) -->
+                <div id="panel-sekretaris" class="feature-page hidden">
+                    <div class="feature-page-header">
+                        <button onclick="tutupFitur('sekretaris')" class="feature-back-btn" aria-label="Kembali">
+                            <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                        </button>
+                        <div class="feature-page-title">
+                            <div class="feature-page-icon bg-primary-50 text-primary-600">
+                                <i data-lucide="clipboard-signature" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">Input Absensi Kelas</h3>
+                                <p class="text-[11px] text-slate-400 leading-tight">Sekretaris</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feature-page-body space-y-4">
+
+                    <!-- Toolbar: Pilih Tanggal Absen -->
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <span class="text-xs font-semibold text-slate-500 shrink-0">Tanggal Absen:</span>
+                            <input type="date" id="sekr-tanggal" onchange="loadSekretarisPanel()" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500">
+                        </div>
+                        <div class="text-[11px] text-slate-400 font-medium italic flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-100 w-full sm:w-auto justify-center">
+                            <i data-lucide="info" class="w-3.5 h-3.5 text-primary-500"></i> Klik salah satu huruf (H/I/S/D/A) untuk mengabsen, langsung tersimpan.
+                        </div>
+                    </div>
+
+                    <!-- Quick-Tap Attendance Table -->
+                    <div class="border border-slate-100 rounded-xl overflow-hidden">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3 text-center">H / I / S / D / A</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sekr-absen-table-body" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows, 1 per siswa -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Rekap Bulanan & Download -->
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100 mt-2">
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <span class="text-xs font-semibold text-slate-500 shrink-0">Rekap Bulan:</span>
+                            <input type="month" id="rekap-bulan" class="bg-white border border-slate-200 text-xs py-1.5 px-3 rounded-lg font-medium focus:ring-primary-500">
+                        </div>
+                        <button onclick="downloadRekapAbsensi()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2 rounded-lg font-bold text-xs transition flex items-center justify-center gap-1.5 shadow">
+                            <i data-lucide="download" class="w-4 h-4"></i> Download Rekap (Excel)
+                        </button>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- PANEL VILLA (halaman penuh, dibuka dari bubble melayang) -->
+                <div id="panel-bendahara-villa" class="feature-page hidden">
+                    <div class="feature-page-header">
+                        <button onclick="tutupFitur('villa')" class="feature-back-btn" aria-label="Kembali">
+                            <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                        </button>
+                        <div class="feature-page-title">
+                            <div class="feature-page-icon bg-amber-50 text-amber-600">
+                                <i data-lucide="palmtree" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">Tabungan Villa</h3>
+                                <p class="text-[11px] text-slate-400 leading-tight">Bendahara Tabungan Villa</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feature-page-body space-y-4">
+
+                    <!-- Total Keseluruhan Tabungan Villa -->
+                    <div class="bg-gradient-to-r from-amber-50 to-white border border-amber-100 rounded-xl p-4 flex items-center gap-3">
+                        <div class="w-11 h-11 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i data-lucide="palmtree" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Keseluruhan Tabungan Villa Terkumpul</p>
+                            <h3 class="text-xl font-bold text-slate-800" id="villa-grand-total">Rp 0</h3>
+                        </div>
+                    </div>
+
+                    <form id="form-villa" onsubmit="submitVilla(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
+                            <select id="villa-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                <option value="" disabled selected>Pilih Siswa...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
+                            <input type="number" id="villa-nominal" min="5000" step="500" placeholder="10000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
+                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
+                                    <input type="radio" name="villa-jenis" value="setor" checked required class="sr-only"> Setor
+                                </label>
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                                    <input type="radio" name="villa-jenis" value="tarik" class="sr-only"> Tarik
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="flex-grow">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
+                                <input type="text" id="villa-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                            </div>
+                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Total Tabungan Villa per Siswa -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="list-ordered" class="w-4 h-4 text-amber-600"></i> Total Tabungan Villa Setiap Siswa
+                        </h4>
+                        <div id="villa-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- Villa Recent Transactions list -->
+                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3">Waktu Transaksi</th>
+                                    <th class="p-3 text-center">Jenis</th>
+                                    <th class="p-3 text-right">Jumlah Uang</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="villa-table-body" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- PANEL TABUNGAN (halaman penuh, dibuka dari bubble melayang) -->
+                <div id="panel-bendahara-tabungan" class="feature-page hidden">
+                    <div class="feature-page-header">
+                        <button onclick="tutupFitur('tabungan')" class="feature-back-btn" aria-label="Kembali">
+                            <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                        </button>
+                        <div class="feature-page-title">
+                            <div class="feature-page-icon bg-sky-50 text-sky-600">
+                                <i data-lucide="piggy-bank" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">Tabungan Siswa</h3>
+                                <p class="text-[11px] text-slate-400 leading-tight">Bendahara Tabungan</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feature-page-body space-y-4">
+
+                    <form id="form-tabungan" onsubmit="submitTabungan(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
+                            <select id="tab-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                <option value="" disabled selected>Pilih Siswa...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
+                            <input type="number" id="tab-nominal" min="5000" step="500" placeholder="10000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
+                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
+                                    <input type="radio" name="tab-jenis" value="setor" checked required class="sr-only"> Setor
+                                </label>
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                                    <input type="radio" name="tab-jenis" value="tarik" class="sr-only"> Tarik
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="flex-grow">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
+                                <input type="text" id="tab-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                            </div>
+                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Total Tabungan per Siswa -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="list-ordered" class="w-4 h-4 text-sky-600"></i> Total Tabungan Setiap Siswa
+                        </h4>
+                        <div id="tab-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- Tabungan Recent Transactions list -->
+                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3">Waktu Transaksi</th>
+                                    <th class="p-3 text-center">Jenis</th>
+                                    <th class="p-3 text-right">Jumlah Uang</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tab-table-body" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- PANEL YEARBOOK (halaman penuh, dibuka dari bubble melayang) -->
+                <div id="panel-bendahara-yearbook" class="feature-page hidden">
+                    <div class="feature-page-header">
+                        <button onclick="tutupFitur('yearbook')" class="feature-back-btn" aria-label="Kembali">
+                            <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                        </button>
+                        <div class="feature-page-title">
+                            <div class="feature-page-icon bg-purple-50 text-purple-600">
+                                <i data-lucide="book-image" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">Tabungan Yearbook</h3>
+                                <p class="text-[11px] text-slate-400 leading-tight">Bendahara Tabungan Yearbook</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feature-page-body space-y-4">
+
+                    <!-- Total Keseluruhan Tabungan Yearbook -->
+                    <div class="bg-gradient-to-r from-purple-50 to-white border border-purple-100 rounded-xl p-4 flex items-center gap-3">
+                        <div class="w-11 h-11 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i data-lucide="book-image" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Keseluruhan Tabungan Yearbook Terkumpul</p>
+                            <h3 class="text-xl font-bold text-slate-800" id="yearbook-grand-total">Rp 0</h3>
+                        </div>
+                    </div>
+
+                    <form id="form-yearbook" onsubmit="submitYearbook(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
+                            <select id="yearbook-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                <option value="" disabled selected>Pilih Siswa...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
+                            <input type="number" id="yearbook-nominal" min="500" step="500" placeholder="10000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
+                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
+                                    <input type="radio" name="yearbook-jenis" value="setor" checked required class="sr-only"> Setor
+                                </label>
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                                    <input type="radio" name="yearbook-jenis" value="tarik" class="sr-only"> Tarik
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="flex-grow">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
+                                <input type="text" id="yearbook-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                            </div>
+                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Total Tabungan Yearbook per Siswa -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="list-ordered" class="w-4 h-4 text-purple-600"></i> Total Tabungan Yearbook Setiap Siswa
+                        </h4>
+                        <div id="yearbook-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- Yearbook Recent Transactions list -->
+                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3">Waktu Transaksi</th>
+                                    <th class="p-3 text-center">Jenis</th>
+                                    <th class="p-3 text-right">Jumlah Uang</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="yearbook-table-body" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- PANEL KAS (halaman penuh, dibuka dari bubble melayang) -->
+                <div id="panel-bendahara-kas" class="feature-page hidden">
+                    <div class="feature-page-header">
+                        <button onclick="tutupFitur('kas')" class="feature-back-btn" aria-label="Kembali">
+                            <i data-lucide="arrow-left" class="w-4 h-4 text-slate-600"></i>
+                        </button>
+                        <div class="feature-page-title">
+                            <div class="feature-page-icon bg-emerald-50 text-emerald-600">
+                                <i data-lucide="wallet" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-slate-800 text-sm leading-tight truncate">Tabungan Kas</h3>
+                                <p class="text-[11px] text-slate-400 leading-tight">Bendahara Tabungan Kas</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="feature-page-body space-y-4">
+
+                    <!-- Total Keseluruhan Tabungan Kas -->
+                    <div class="bg-gradient-to-r from-emerald-50 to-white border border-emerald-100 rounded-xl p-4 flex items-center gap-3">
+                        <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                            <i data-lucide="wallet" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Keseluruhan Tabungan Kas Terkumpul</p>
+                            <h3 class="text-xl font-bold text-slate-800" id="kas-grand-total">Rp 0</h3>
+                        </div>
+                    </div>
+
+                    <form id="form-kas" onsubmit="submitKas(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Siswa Penabung</label>
+                            <select id="kas-siswa" required class="w-full bg-white border border-slate-200 text-slate-800 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                                <option value="" disabled selected>Pilih Siswa...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah Nominal (Rp)</label>
+                            <input type="number" id="kas-nominal" min="500" step="500" placeholder="5000" required class="w-full bg-white border border-slate-200 py-1.5 px-3 rounded-lg text-sm focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jenis Transaksi</label>
+                            <div class="flex bg-white p-1 rounded-lg border border-slate-200 text-xs font-medium justify-between gap-1">
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-emerald-500 has-[:checked]:text-white">
+                                    <input type="radio" name="kas-jenis" value="setor" checked required class="sr-only"> Setor
+                                </label>
+                                <label class="flex-grow text-center py-1.5 px-2 rounded cursor-pointer transition hover:bg-slate-100 has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                                    <input type="radio" name="kas-jenis" value="tarik" class="sr-only"> Tarik
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="flex-grow">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Catatan (Keterangan)</label>
+                                <input type="text" id="kas-ket" placeholder="Opsional..." class="w-full bg-white border border-slate-200 py-2 px-3 rounded-lg text-sm focus:ring-primary-500">
+                            </div>
+                            <button type="submit" class="bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white px-4 py-2 rounded-lg font-bold text-xs h-[38px] transition flex items-center gap-1 shrink-0 shadow">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Transaksi
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Total Tabungan Kas per Siswa -->
+                    <div class="border border-slate-100 rounded-xl p-4 bg-slate-50/50">
+                        <h4 class="font-semibold text-sm mb-3 flex items-center gap-1.5 text-slate-700">
+                            <i data-lucide="list-ordered" class="w-4 h-4 text-emerald-600"></i> Total Tabungan Kas Setiap Siswa
+                        </h4>
+                        <div id="kas-total-siswa-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- Kas Recent Transactions list -->
+                    <div class="border border-slate-100 rounded-xl overflow-hidden mt-4">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3">Waktu Transaksi</th>
+                                    <th class="p-3 text-center">Jenis</th>
+                                    <th class="p-3 text-right">Jumlah Uang</th>
+                                    <th class="p-3">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kas-table-body" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+
+
+    <!-- ==================== BUBBLE MELAYANG (TOMBOL FITUR SESUAI ROLE) ====================
+         Bisa diseret/dipindah ke mana saja di layar, seperti chat head. Tap (tanpa menyeret)
+         untuk membuka halaman fitur sesuai role user yang sedang login. ==================== -->
+    <button id="feature-bubble" class="hidden" style="right: 20px; bottom: 96px;">
+        <i data-lucide="clipboard-signature" id="feature-bubble-icon"></i>
+    </button>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-900 border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-semibold">
+                <div class="w-6 h-6 bg-primary-600 rounded flex items-center justify-center text-white">
+                    <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i>
+                </div>
+                <span class="text-slate-400">SIAKAD</span>
+            </div>
+            <p>© 2026 Created by Mnuulll.</p>
+        </div>
+    </footer>
+
+    <!-- ==================== JAVASCRIPT ==================== -->
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>
