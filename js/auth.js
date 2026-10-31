@@ -181,3 +181,64 @@ async function checkSession() {
         console.error("Gagal memeriksa sesi:", err);
     }
 }
+
+// ====================================================================
+// GANTI PIN SENDIRI (fungsi database ganti_pin; PIN lama diverifikasi di server)
+// ====================================================================
+function showPinModalError(msg) {
+    const el = document.getElementById('pin-modal-error');
+    el.innerText = msg || '';
+    el.classList.toggle('hidden', !msg);
+}
+
+function openChangePinModal() {
+    ['pin-lama', 'pin-baru', 'pin-baru2'].forEach(id => { document.getElementById(id).value = ''; });
+    showPinModalError('');
+    document.getElementById('pin-modal').classList.remove('hidden');
+    lucide.createIcons();
+    document.getElementById('pin-lama').focus();
+}
+
+function closeChangePinModal() {
+    document.getElementById('pin-modal').classList.add('hidden');
+}
+
+async function submitChangePin() {
+    const lama = document.getElementById('pin-lama').value;
+    const baru = document.getElementById('pin-baru').value;
+    const baru2 = document.getElementById('pin-baru2').value;
+
+    if (!lama) return showPinModalError('Masukkan PIN lama kamu.');
+    if (!/^[0-9]{6}$/.test(baru)) return showPinModalError('PIN baru harus 6 angka.');
+    if (baru !== baru2) return showPinModalError('Pengulangan PIN baru tidak sama.');
+
+    const btn = document.getElementById('pin-submit-btn');
+    btn.disabled = true;
+    showPinModalError('');
+
+    try {
+        const { data, error } = await supabaseClient.rpc('ganti_pin', { p_pin_lama: lama, p_pin_baru: baru });
+        if (error) throw error;
+
+        const pesan = {
+            tidak_login: 'Sesi kamu sudah habis. Silakan login ulang.',
+            format_pin_baru: 'PIN baru harus 6 angka.',
+            pin_terlalu_mudah: 'PIN terlalu mudah ditebak. Jangan pakai 123456 atau angka yang sama semua.',
+            pin_sama: 'PIN baru tidak boleh sama dengan PIN lama.',
+            terlalu_banyak_percobaan: 'Terlalu banyak percobaan salah. Coba lagi dalam 10 menit.',
+            pin_lama_salah: 'PIN lama yang kamu masukkan salah.'
+        };
+        if (!data || !data.ok) {
+            showPinModalError(pesan[data && data.error] || 'Gagal mengganti PIN. Coba lagi.');
+            return;
+        }
+
+        closeChangePinModal();
+        alert('PIN berhasil diganti. Gunakan PIN baru saat login berikutnya.');
+    } catch (err) {
+        console.error('Gagal ganti PIN:', err);
+        showPinModalError('Gagal mengganti PIN. Periksa koneksi internet kamu.');
+    } finally {
+        btn.disabled = false;
+    }
+}
