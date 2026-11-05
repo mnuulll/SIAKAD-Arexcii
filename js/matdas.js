@@ -56,7 +56,11 @@ function mdDec(v, p, opsi = {}) {
     return (neg ? (opsi.dot ? '-' : '−') : '') + ip + (fp ? sep + fp : '');
 }
 // Pecahan bersusun
-const mdF = (n, d) => `<span class="inline-flex flex-col items-center align-middle mx-1 leading-tight text-[0.82em]"><span class="px-1.5 border-b-2 border-slate-800">${n}</span><span class="px-1.5">${d}</span></span>`;
+const mdF = (n, d) => `<span style="display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 .25em;line-height:1.15;font-size:.85em"><span style="padding:0 .3em;border-bottom:2px solid currentColor">${n}</span><span style="padding:0 .3em">${d}</span></span>`;
+// Pangkat: tulisan kecil di atas, gayanya ditulis langsung agar selalu tampil sebagai pangkat
+const mdSup = (e) => `<sup style="font-size:.62em;line-height:0;vertical-align:super;margin-left:.05em">${e}</sup>`;
+// Akar: tanda akar tebal + garis di atas angka, supaya tidak terbaca sebagai angka biasa. 'pangkat' = indeks akar (3 untuk akar pangkat tiga)
+const mdAkar = (isi, pangkat) => `<span style="white-space:nowrap">${pangkat ? `<sup style="font-size:.55em;line-height:0;vertical-align:super;margin-right:-.05em">${pangkat}</sup>` : ''}<span style="font-weight:800;font-size:1.1em;margin-right:.04em">√</span><span style="border-top:2px solid currentColor;padding:.1em .14em 0">${isi}</span></span>`;
 
 function mdRatDec(r) {
     for (let k = 0; k <= 6; k++) {
@@ -141,58 +145,68 @@ const MD_GEN = {
     },
     pangkat: {
         mudah() {
-            if (mdRnd(0, 2) > 0) { const n = mdRnd(2, 12); return mdMk(`${n}<sup>2</sup>`, `${n}^2`, mdR(n * n)); }
-            const n = mdRnd(2, 5); return mdMk(`${n}<sup>3</sup>`, `${n}^3`, mdR(n ** 3));
+            if (mdRnd(0, 2) > 0) { const n = mdRnd(2, 12); return mdMk(`${n}${mdSup(`2`)}`, `${n}^2`, mdR(n * n)); }
+            const n = mdRnd(2, 5); return mdMk(`${n}${mdSup(`3`)}`, `${n}^3`, mdR(n ** 3));
         },
         sedang() {
             const t = mdRnd(0, 4);
-            if (t === 4) { const a = mdRnd(2, 12), b = mdRnd(2, 12); return mdMk(`${a}<sup>2</sup> + ${b}<sup>2</sup>`, `${a}^2+${b}^2`, mdR(a * a + b * b)); }
-            if (t === 0) { const n = mdRnd(13, 25); return mdMk(`${n}<sup>2</sup>`, `${n}^2`, mdR(n * n)); }
-            if (t === 1) { const n = mdRnd(2, 10); return mdMk(`${n}<sup>3</sup>`, `${n}^3`, mdR(n ** 3)); }
-            if (t === 2) { const k = mdRnd(5, 10); return mdMk(`2<sup>${k}</sup>`, `2^${k}`, mdR(2 ** k)); }
-            const k = mdRnd(2, 6); return mdMk(`10<sup>${k}</sup>`, `10^${k}`, mdR(10 ** k));
+            if (t === 4) { const a = mdRnd(2, 12), b = mdRnd(2, 12); return mdMk(`${a}${mdSup(`2`)} + ${b}${mdSup(`2`)}`, `${a}^2+${b}^2`, mdR(a * a + b * b), { hint: 'Hitung tiap pangkat lebih dulu, lalu jumlahkan.' }); }
+            if (t === 0) { const n = mdRnd(13, 25); return mdMk(`${n}${mdSup(`2`)}`, `${n}^2`, mdR(n * n)); }
+            if (t === 1) { const n = mdRnd(2, 10); return mdMk(`${n}${mdSup(`3`)}`, `${n}^3`, mdR(n ** 3)); }
+            if (t === 2) { const k = mdRnd(5, 10); return mdMk(`2${mdSup(`${k}`)}`, `2^${k}`, mdR(2 ** k)); }
+            const k = mdRnd(2, 6); return mdMk(`10${mdSup(`${k}`)}`, `10^${k}`, mdR(10 ** k));
         },
         sulit() {
             const t = mdRnd(0, 6);
-            if (t === 5) { const a = mdRnd(10, 25), b = mdRnd(2, 9); return mdMk(`${a}<sup>2</sup> − ${b}<sup>2</sup>`, `${a}^2-${b}^2`, mdR(a * a - b * b)); }
-            if (t === 6) { const a = mdRnd(2, 9), b = mdRnd(2, 12); return mdMk(`${a}<sup>3</sup> + ${b}<sup>2</sup>`, `${a}^3+${b}^2`, mdR(a ** 3 + b * b)); }
+            if (t === 5) { const a = mdRnd(10, 25), b = mdRnd(2, 9); return mdMk(`${a}${mdSup(`2`)} − ${b}${mdSup(`2`)}`, `${a}^2-${b}^2`, mdR(a * a - b * b), { hint: 'Hitung tiap pangkat lebih dulu, lalu kurangkan.' }); }
+            if (t === 6) { const a = mdRnd(2, 9), b = mdRnd(2, 12); return mdMk(`${a}${mdSup(`3`)} + ${b}${mdSup(`2`)}`, `${a}^3+${b}^2`, mdR(a ** 3 + b * b), { hint: 'Hitung tiap pangkat lebih dulu, lalu jumlahkan.' }); }
             if (t === 0) {
                 const b = mdRnd(2, 9); let e = mdRnd(3, 5);
                 while (b ** e > 100000) e--;
-                return mdMk(`${b}<sup>${e}</sup>`, `${b}^${e}`, mdR(b ** e));
+                return mdMk(`${b}${mdSup(`${e}`)}`, `${b}^${e}`, mdR(b ** e));
             }
-            if (t === 1) { const b = mdRnd(2, 5), e = mdRnd(2, 5); return mdMk(`(−${b})<sup>${e}</sup>`, `(-${b})^${e}`, mdR((-b) ** e)); }
-            if (t === 2) { const n = mdRnd(2, 99); return mdMk(`${n}<sup>0</sup>`, `${n}^0`, mdR(1)); }
+            if (t === 1) { const b = mdRnd(2, 5), e = mdRnd(2, 5); return mdMk(`(−${b})${mdSup(`${e}`)}`, `(-${b})^${e}`, mdR((-b) ** e)); }
+            if (t === 2) { const n = mdRnd(2, 99); return mdMk(`${n}${mdSup(`0`)}`, `${n}^0`, mdR(1)); }
             if (t === 3) {
                 const b = mdRnd(2, 5), e = mdRnd(1, 3);
-                return mdMk(`${b}<sup>−${e}</sup>`, `${b}^-${e}`, mdR(1, b ** e), { format: 'frac', hint: 'Jawab dalam pecahan, contoh 1/8' });
+                return mdMk(`${b}${mdSup(`−${e}`)}`, `${b}^-${e}`, mdR(1, b ** e), { format: 'frac', hint: 'Jawab dalam pecahan, contoh 1/8' });
             }
             let a, b;
             do { a = mdRnd(1, 5); b = mdRnd(2, 6); } while (mdGcd(a, b) !== 1);
             const e = mdRnd(2, 3);
-            return mdMk(`(${mdF(a, b)})<sup>${e}</sup>`, `(${a}/${b})^${e}`, mdR(a ** e, b ** e), { format: 'frac', hint: 'Jawab dalam pecahan, contoh 4/9' });
+            return mdMk(`(${mdF(a, b)})${mdSup(`${e}`)}`, `(${a}/${b})^${e}`, mdR(a ** e, b ** e), { format: 'frac', hint: 'Jawab dalam pecahan, contoh 4/9' });
         }
     },
     akar: {
-        mudah() { const n = mdRnd(2, 12); return mdMk(`√${n * n}`, `sqrt(${n * n})`, mdR(n)); },
+        mudah() {
+            const n = mdRnd(2, 12);
+            return mdMk(mdAkar(n * n), `sqrt(${n * n})`, mdR(n), { hint: 'Akar kuadrat: bilangan yang jika dikuadratkan sama dengan angka di bawah tanda akar.' });
+        },
         sedang() {
             const t = mdRnd(0, 2);
-            if (t === 0) { const n = mdRnd(13, 30); return mdMk(`√${mdFi(n * n)}`, `sqrt(${n * n})`, mdR(n)); }
-            if (t === 1) { const n = mdRnd(2, 15), m = mdRnd(2, 15); return mdMk(`√${n * n} + √${m * m}`, `sqrt(${n * n})+sqrt(${m * m})`, mdR(n + m)); }
-            const n = mdRnd(2, 6); return mdMk(`∛${n ** 3}`, `cbrt(${n ** 3})`, mdR(n));
+            if (t === 0) { const n = mdRnd(13, 30); return mdMk(mdAkar(mdFi(n * n)), `sqrt(${n * n})`, mdR(n), { hint: 'Akar kuadrat: bilangan yang jika dikuadratkan sama dengan angka di bawah tanda akar.' }); }
+            if (t === 1) {
+                const n = mdRnd(2, 15), m = mdRnd(2, 15);
+                return mdMk(`${mdAkar(n * n)} + ${mdAkar(m * m)}`, `sqrt(${n * n})+sqrt(${m * m})`, mdR(n + m), { hint: 'Hitung nilai tiap akar kuadrat lebih dulu, lalu jumlahkan.' });
+            }
+            const n = mdRnd(2, 6);
+            return mdMk(mdAkar(n ** 3, 3), `cbrt(${n ** 3})`, mdR(n), { hint: 'Akar pangkat tiga (angka 3 kecil di kiri tanda akar): bilangan yang dipangkatkan 3 sama dengan angka ini.' });
         },
         sulit() {
             const t = mdRnd(0, 4);
-            if (t === 4) { const a = mdRnd(3, 20), b = mdRnd(2, 12); return mdMk(`√${mdFi(a * a)} × √${b * b}`, `sqrt(${a * a})*sqrt(${b * b})`, mdR(a * b)); }
-            if (t === 0) { const n = mdRnd(31, 60); return mdMk(`√${mdFi(n * n)}`, `sqrt(${n * n})`, mdR(n)); }
-            if (t === 1) { const n = mdRnd(7, 12); return mdMk(`∛${mdFi(n ** 3)}`, `cbrt(${n ** 3})`, mdR(n)); }
+            if (t === 4) {
+                const a = mdRnd(3, 20), b = mdRnd(2, 12);
+                return mdMk(`${mdAkar(mdFi(a * a))} × ${mdAkar(b * b)}`, `sqrt(${a * a})*sqrt(${b * b})`, mdR(a * b), { hint: 'Hitung nilai tiap akar kuadrat lebih dulu, lalu kalikan.' });
+            }
+            if (t === 0) { const n = mdRnd(31, 60); return mdMk(mdAkar(mdFi(n * n)), `sqrt(${n * n})`, mdR(n), { hint: 'Akar kuadrat: bilangan yang jika dikuadratkan sama dengan angka di bawah tanda akar.' }); }
+            if (t === 1) { const n = mdRnd(7, 12); return mdMk(mdAkar(mdFi(n ** 3), 3), `cbrt(${n ** 3})`, mdR(n), { hint: 'Akar pangkat tiga (angka 3 kecil di kiri tanda akar): bilangan yang dipangkatkan 3 sama dengan angka ini.' }); }
             if (t === 2) {
                 const n = mdPick([2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]);
-                return mdMk(`√${mdDec(n * n, 2, { trim: true })}`, `sqrt(${mdDec(n * n, 2, { trim: true, dot: true })})`, mdR(n, 10), { format: 'des', hint: 'Jawab dalam desimal, contoh 0,7' });
+                return mdMk(mdAkar(mdDec(n * n, 2, { trim: true })), `sqrt(${mdDec(n * n, 2, { trim: true, dot: true })})`, mdR(n, 10), { format: 'des', hint: 'Akar kuadrat. Jawab dalam desimal, contoh 0,7' });
             }
             let a, b;
             do { a = mdRnd(2, 9); b = mdRnd(2, 9); } while (mdGcd(a, b) !== 1 || a >= b);
-            return mdMk(`√${mdF(a * a, b * b)}`, `sqrt(${a * a}/${b * b})`, mdR(a, b), { format: 'frac', hint: 'Jawab dalam pecahan, contoh 7/9' });
+            return mdMk(mdAkar(mdF(a * a, b * b)), `sqrt(${a * a}/${b * b})`, mdR(a, b), { format: 'frac', hint: 'Akar kuadrat. Jawab dalam pecahan, contoh 7/9' });
         }
     },
     persen: {
@@ -429,12 +443,6 @@ function matdasOnLeave() {
     if (md.fase === 'main') { mdHentikan(); md.fase = 'setup'; }
 }
 
-function setupMatdasLauncher() {
-    const el = document.getElementById('matdas-launcher');
-    if (!el) return;
-    el.classList.toggle('hidden', !(activeUser && activeUser.role !== 'wali_kelas'));
-}
-
 async function openMatdasPage() {
     if (!activeUser) return;
     mdMuatSetelan();
@@ -442,56 +450,16 @@ async function openMatdasPage() {
     if (md.fase === 'hasil') md.fase = 'setup';
     showDashPage('matdas');
     mdRender();
-    await mdMuatRiwayat();
+    await mgMuatRiwayat('matematika');
     if (md.fase === 'setup') mdRender();
 }
 
 // ====================================================================
-// RIWAYAT & REKOR
+// RIWAYAT & REKOR: fungsi bersama ada di js/minigames.js
 // ====================================================================
-async function mdMuatRiwayat() {
-    try {
-        const { data, error } = await supabaseClient.from('latihan_matdas').select('*').order('created_at', { ascending: false }).limit(200);
-        if (error) throw error;
-        md.riwayat = data || [];
-        md.riwayatMuat = true;
-    } catch (err) {
-        console.error('Gagal memuat riwayat latihan:', err);
-    }
-}
-
-function mdAkurasi(r) { return r.total ? r.benar / r.total : 0; }
-// Apakah a lebih baik dari b untuk mode yang sama?
-function mdLebihBaik(a, b, mode) {
-    if (!b) return true;
-    if (mode === 'waktu') return a.benar > b.benar || (a.benar === b.benar && mdAkurasi(a) > mdAkurasi(b));
-    return mdAkurasi(a) > mdAkurasi(b) || (mdAkurasi(a) === mdAkurasi(b) && a.durasi_detik < b.durasi_detik);
-}
-function mdRekor(mode, batas) {
-    return md.riwayat.filter(r => r.mode === mode && r.batas === batas).reduce((best, r) => mdLebihBaik(r, best, mode) ? r : best, null);
-}
-function mdFmtWaktu(detik) {
-    const d = Math.max(0, Math.round(detik));
-    return `${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}`;
-}
-function mdFmtTgl(iso) {
-    return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-function mdLabelMode(mode, batas) { return mode === 'waktu' ? `Time attack ${batas} menit` : `${batas} soal`; }
-function mdToast(msg) {
-    let el = document.getElementById('md-toast');
-    if (!el) {
-        el = document.createElement('div');
-        el.id = 'md-toast';
-        el.className = 'fixed left-1/2 -translate-x-1/2 bottom-6 z-[120] bg-slate-800 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg transition-opacity duration-200';
-        el.setAttribute('role', 'status');
-        document.body.appendChild(el);
-    }
-    el.textContent = msg;
-    el.style.opacity = '1';
-    clearTimeout(mdToast._t);
-    mdToast._t = setTimeout(() => { el.style.opacity = '0'; }, 2400);
-}
+const mdFmtWaktu = (d) => mgFmtWaktu(d);
+const mdLabelMode = (m, b) => mgLabelMode(m, b);
+async function mdMuatRiwayat() { await mgMuatRiwayat('matematika'); }
 
 // ====================================================================
 // RENDER
@@ -528,7 +496,7 @@ function mdViewPengaturan() {
         : MD_JUMLAH.map(j => mdChip(md.jumlah === j, `mdSet('jumlah',${j})`, `${j} soal`)).join('');
     const label = (t) => `<p class="text-sm font-semibold text-slate-700 mb-2">${t}</p>`;
     return `
-        <p class="text-sm text-slate-600 leading-relaxed">Latihan hitung cepat. Soal dibuat otomatis setiap kali, jadi tidak akan habis dan jarang berulang.</p>
+        <p class="text-sm text-slate-600 leading-relaxed">Latihan hitung cepat. Soal dibuat otomatis setiap kali, jadi tidak akan habis dan jarang berulang. Poin tiap sesi masuk ke peringkat Mini Games.</p>
         <div>${label('Topik')}<div class="flex flex-wrap gap-2">
             ${mdChip(semua, "mdToggleSemua()", 'Semua topik')}${topik}</div></div>
         <div>${label('Kesulitan')}<div class="flex flex-wrap gap-2">${kes}</div></div>
@@ -553,43 +521,7 @@ function mdToggleTopik(k) {
 function mdToggleSemua() { md.topik = new Set(MD_URUT_TOPIK); mdSimpanSetelan(); mdRender(); }
 
 // ---------- Riwayat ----------
-function mdViewRiwayat() {
-    if (!md.riwayatMuat) return `<p class="text-sm text-slate-400 py-6 text-center">Memuat riwayat...</p>`;
-    if (!md.riwayat.length) {
-        return `<div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-8 text-center">
-            <p class="font-semibold text-slate-700">Belum ada riwayat</p>
-            <p class="text-sm text-slate-400 mt-1">Selesaikan satu sesi latihan, nanti hasil dan rekormu muncul di sini.</p></div>`;
-    }
-    const kunciRekor = [];
-    MD_MENIT.forEach(m => { if (mdRekor('waktu', m)) kunciRekor.push(['waktu', m]); });
-    MD_JUMLAH.forEach(j => { if (mdRekor('jumlah', j)) kunciRekor.push(['jumlah', j]); });
-    const rekor = kunciRekor.map(([mode, batas]) => {
-        const r = mdRekor(mode, batas);
-        const nilai = mode === 'waktu' ? `${r.benar} soal benar` : `${Math.round(mdAkurasi(r) * 100)}% dalam ${mdFmtWaktu(r.durasi_detik)}`;
-        return `<div class="flex items-center justify-between gap-3 py-2.5">
-            <div><p class="text-sm font-semibold text-slate-700">${mdLabelMode(mode, batas)}</p>
-                <p class="text-xs text-slate-400">Tingkat ${escapeHtml(MD_KESULITAN[r.kesulitan] || '')}, ${mdFmtTgl(r.created_at)}</p></div>
-            <p class="text-sm font-bold text-primary-700 text-right">${nilai}</p></div>`;
-    }).join('');
-    const daftar = md.riwayat.slice(0, 12).map(r => {
-        const topik = (r.topik || []).filter(k => MD_TOPIK[k]).map(k => MD_TOPIK[k].nama);
-        const ringkasTopik = topik.length === MD_URUT_TOPIK.length ? 'Semua topik' : topik.join(', ');
-        return `<div class="py-3">
-            <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0"><p class="text-sm font-semibold text-slate-700">${mdLabelMode(r.mode, r.batas)}, ${escapeHtml(MD_KESULITAN[r.kesulitan] || '')}</p>
-                    <p class="text-xs text-slate-400 truncate">${escapeHtml(ringkasTopik)}</p></div>
-                <div class="text-right shrink-0"><p class="text-sm font-bold text-slate-800">${Number(r.benar)} dari ${Number(r.total)}</p>
-                    <p class="text-xs text-slate-400">${mdFmtTgl(r.created_at)}</p></div>
-            </div></div>`;
-    }).join('');
-    return `<div class="flex flex-col gap-4">
-        <div class="rounded-2xl border border-slate-100 p-4"><h4 class="font-bold text-slate-800">Rekor pribadi</h4>
-            <p class="text-xs text-slate-400 mb-1">Time attack dinilai dari jumlah soal benar. Mode jumlah soal dinilai dari akurasi, lalu kecepatan.</p>
-            <div class="divide-y divide-slate-100">${rekor}</div></div>
-        <div class="rounded-2xl border border-slate-100 p-4"><h4 class="font-bold text-slate-800">Sesi terakhir</h4>
-            <div class="divide-y divide-slate-100">${daftar}</div></div>
-    </div>`;
-}
+function mdViewRiwayat() { return mgViewRiwayat('matematika'); }
 
 // ---------- Layar latihan ----------
 function mdViewMain() {
@@ -617,7 +549,7 @@ function mdViewMain() {
         <div id="md-kotak" class="rounded-xl border-2 border-primary-200 bg-primary-50/40 min-h-[3.75rem] px-4 flex items-center justify-center">
             <span id="md-jawab" class="text-2xl font-bold tabular-nums text-slate-900"></span>
         </div>
-        <p id="md-umpan" class="min-h-[1.5rem] text-center text-sm font-semibold" aria-live="assertive"></p>
+        <p id="md-umpan" class="min-h-[3.5rem] text-center text-sm font-semibold" aria-live="assertive"></p>
         <div class="grid grid-cols-4 gap-2">
             ${KEY('7')}${KEY('8')}${KEY('9')}${KEY('⌫', '⌫', aksi)}
             ${KEY('4')}${KEY('5')}${KEY('6')}${KEY('/', '/', aksi)}
@@ -641,7 +573,20 @@ function mdUmpan(teks, kelas) {
     const el = document.getElementById('md-umpan');
     if (!el) return;
     el.textContent = teks;
-    el.className = 'min-h-[1.5rem] text-center text-sm font-semibold ' + (kelas || '');
+    el.className = 'min-h-[3.5rem] text-center text-sm font-semibold ' + (kelas || '');
+}
+
+// Pembahasan singkat: soal yang berupa hitungan ditampilkan lengkap dengan hasilnya, mis. "√64 + √81 = 17"
+function mdPembahasan(q) {
+    const teks = q.html.replace(/<[^>]+>/g, ' ');
+    if (/[A-Za-z]{3,}/.test(teks)) return '';   // soal berbentuk kalimat: tanpa persamaan
+    return `<div class="mt-1 text-lg font-bold text-slate-700 tabular-nums">${q.html} <span class="text-slate-400">=</span> ${mdTampilJawab(q)}</div>`;
+}
+function mdUmpanSalah(q, kelas) {
+    const el = document.getElementById('md-umpan');
+    if (!el) return;
+    el.innerHTML = `Jawaban yang benar: ${mdTampilJawab(q)}${mdPembahasan(q)}`;
+    el.className = 'min-h-[3.5rem] text-center text-sm font-semibold ' + kelas;
 }
 
 // ====================================================================
@@ -728,16 +673,16 @@ function mdKirim() {
     mdCatat(ok, md.input);
     md.kunci = true;
     if (ok) mdUmpan('Benar', 'text-emerald-600');
-    else mdUmpan(`Jawaban yang benar: ${mdTampilJawab(md.q)}`, 'text-rose-600');
-    md.jeda = setTimeout(mdLanjut, ok ? 300 : 1200);
+    else mdUmpanSalah(md.q, 'text-rose-600');
+    md.jeda = setTimeout(mdLanjut, ok ? 300 : 1800);
 }
 
 function mdLewati() {
     if (md.fase !== 'main' || md.kunci) return;
     mdCatat(false, '(dilewati)');
     md.kunci = true;
-    mdUmpan(`Jawaban yang benar: ${mdTampilJawab(md.q)}`, 'text-slate-600');
-    md.jeda = setTimeout(mdLanjut, 1000);
+    mdUmpanSalah(md.q, 'text-slate-600');
+    md.jeda = setTimeout(mdLanjut, 1800);
 }
 
 function mdLanjut() {
@@ -768,18 +713,21 @@ async function mdSelesai() {
     const total = md.hasil.length;
     const durasi = Math.max(1, Math.round(lewat / 1000));
     const batas = md.mode === 'waktu' ? md.menit : md.jumlah;
-    const baris = { mode: md.mode, batas, kesulitan: md.kes, topik: [...md.topik], benar, total, durasi_detik: durasi };
-    const lama = mdRekor(md.mode, batas);
-    md.ringkas = { benar, total, durasi, batas, rekorBaru: total > 0 && mdLebihBaik({ ...baris, created_at: '' }, lama, md.mode), pertama: !lama };
+    const poin = mgPoin(md.hasil);
+    const lama = mgRekor('matematika', md.mode, batas);
+    md.ringkas = {
+        benar, total, durasi, batas, poin,
+        rekorBaru: total > 0 && mgLebihBaik({ benar, total, poin, durasi_detik: durasi }, lama, md.mode),
+        pertama: !lama
+    };
     md.status = total > 0 ? 'Menyimpan hasil...' : '';
     mdRender();
     window.scrollTo({ top: 0 });
     if (!total) return;
     try {
-        const { error } = await supabaseClient.from('latihan_matdas').insert({ siswa_id: activeUser.id, ...baris });
-        if (error) throw error;
-        md.status = 'Hasil tersimpan di riwayatmu.';
-        await mdMuatRiwayat();
+        await mgSimpanSesi('matematika', { mode: md.mode, batas, kesulitan: md.kes, topik: [...md.topik], durasi, hasil: md.hasil });
+        md.status = 'Hasil tersimpan di riwayat dan peringkatmu.';
+        await mgMuatRiwayat('matematika');
     } catch (err) {
         console.error('Gagal menyimpan hasil latihan:', err);
         md.status = 'Hasil belum tersimpan (periksa koneksi internet).';
@@ -820,7 +768,8 @@ function mdViewHasil() {
         <div class="rounded-2xl bg-gradient-to-br from-primary-700 to-primary-900 text-white p-5">
             <p class="text-sm text-primary-100">${judul}</p>
             <p class="mt-1 text-3xl font-extrabold tracking-tight">${sub}</p>
-            <p class="text-xs text-primary-200 mt-2">${mdLabelMode(md.mode, r.batas)}, tingkat ${MD_KESULITAN[md.kes]}</p>
+            <p class="text-sm text-primary-100 mt-2"><b class="text-white">+${mgFmtAngka(r.poin)} poin</b> untuk peringkatmu</p>
+            <p class="text-xs text-primary-200 mt-1">${mdLabelMode(md.mode, r.batas)}, tingkat ${MD_KESULITAN[md.kes]}</p>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             ${tile('Akurasi', akurasi + '%')}${tile('Soal dijawab', r.total)}

@@ -19,7 +19,8 @@ function escapeHtml(value) {
 function showDashPage(name, fromPop = false) {
     // Sesi latihan yang sedang berjalan dibatalkan jika pengguna berpindah halaman (js/matdas.js)
     if (name !== 'matdas' && typeof matdasOnLeave === 'function') matdasOnLeave();
-    const pages = { home: 'dash-home', info: 'page-tabungan-info', log: 'page-tabungan-log', role: 'page-role', utbk: 'page-utbk', matdas: 'page-matdas' };
+    if (name !== 'inggris' && typeof inggrisOnLeave === 'function') inggrisOnLeave();
+    const pages = { home: 'dash-home', info: 'page-tabungan-info', log: 'page-tabungan-log', role: 'page-role', utbk: 'page-utbk', matdas: 'page-matdas', inggris: 'page-inggris', minigames: 'page-minigames' };
     Object.entries(pages).forEach(([key, id]) => {
         const el = document.getElementById(id);
         if (el) el.classList.toggle('hidden', key !== name);
@@ -283,7 +284,7 @@ async function showDashboard() {
 
     // UTBK Corner: hanya tampil untuk siswa kelas UTBK (js/utbk.js)
     if (typeof setupUtbkLauncher === 'function') setupUtbkLauncher();
-    if (typeof setupMatdasLauncher === 'function') setupMatdasLauncher();
+    if (typeof setupMiniGamesLauncher === 'function') setupMiniGamesLauncher();
 
     lucide.createIcons();
 }
@@ -353,8 +354,8 @@ function hideAllRolePanels() {
     if (launcher) launcher.classList.add('hidden');
     const utbkLauncher = document.getElementById('utbk-launcher');
     if (utbkLauncher) utbkLauncher.classList.add('hidden');
-    const matdasLauncher = document.getElementById('matdas-launcher');
-    if (matdasLauncher) matdasLauncher.classList.add('hidden');
+    const miniGamesLauncher = document.getElementById('minigames-launcher');
+    if (miniGamesLauncher) miniGamesLauncher.classList.add('hidden');
     ['launch-ketua', 'launch-siswa'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
