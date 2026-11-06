@@ -539,6 +539,14 @@
                 </section>
             </div>
 
+            <!-- ===== HALAMAN: PROFIL ===== -->
+            <div id="page-profil" class="hidden flex flex-col gap-4">
+                <section class="bg-white rounded-2xl border border-blue-100 shadow-md p-5 md:p-6 relative overflow-hidden">
+                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary-600"></div>
+                    <div id="profil-root"></div>
+                </section>
+            </div>
+
             <!-- ===== HALAMAN: MINI GAMES (hub & peringkat) ===== -->
             <div id="page-minigames" class="hidden flex flex-col gap-4">
                 <button type="button" onclick="closeTabunganPages()" class="self-start flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-primary-700 transition">
@@ -1069,6 +1077,24 @@
     <!-- ==================== BUBBLE MELAYANG (TOMBOL FITUR SESUAI ROLE) ====================
          Bisa diseret/dipindah ke mana saja di layar, seperti chat head. Tap (tanpa menyeret)
          untuk membuka halaman fitur sesuai role user yang sedang login. ==================== -->
+    <!-- ==================== BOTTOM NAVIGATION ==================== -->
+    <nav id="bottom-nav" class="bnav" aria-label="Navigasi utama">
+        <div class="bnav-bar">
+            <button type="button" id="nav-home" class="bnav-item aktif" onclick="navKe('home')" aria-current="page">
+                <span class="bnav-ikon"><i data-lucide="house"></i></span><span class="bnav-label">Home</span>
+            </button>
+            <button type="button" id="nav-utbk" class="bnav-item" onclick="navKe('utbk')" aria-current="false" hidden>
+                <span class="bnav-ikon"><i data-lucide="graduation-cap"></i></span><span class="bnav-label">UTBK</span>
+            </button>
+            <button type="button" id="nav-minigames" class="bnav-item" onclick="navKe('minigames')" aria-current="false">
+                <span class="bnav-ikon"><i data-lucide="gamepad-2"></i></span><span class="bnav-label">Mini Games</span>
+            </button>
+            <button type="button" id="nav-profil" class="bnav-item" onclick="navKe('profil')" aria-current="false">
+                <span class="bnav-ikon"><i data-lucide="user-round"></i></span><span class="bnav-label">Profil</span>
+            </button>
+        </div>
+    </nav>
+
     <button id="feature-bubble" class="hidden" style="right: 20px; bottom: 96px;">
         <i data-lucide="clipboard-signature" id="feature-bubble-icon"></i>
     </button>
@@ -1129,6 +1155,8 @@
     <script src="js/inggris-data.js"></script>
     <script src="js/matdas.js"></script>
     <script src="js/inggris.js"></script>
+    <script src="js/profil.js"></script>
+    <script src="js/nav.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/pwa.js"></script>
 </body>

@@ -117,3 +117,91 @@
 #feature-bubble-icon.is-spinning {
     animation: tile-spin 0.6s linear infinite;
 }
+
+/* ============ BOTTOM NAVIGATION (mengambang) ============
+   Bar melayang di atas konten, dengan tombol aktif berbentuk lingkaran yang "naik" keluar dari bar. */
+.bnav {
+    position: fixed;
+    left: 50%;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    width: min(calc(100% - 1.5rem), 26rem);
+    z-index: 45;               /* di bawah halaman fitur (50) agar tidak menutupinya */
+    display: none;
+    pointer-events: none;      /* hanya bar-nya yang bisa disentuh */
+}
+body.nav-aktif .bnav { display: block; animation: bnav-masuk 380ms cubic-bezier(.22, 1, .36, 1) both; }
+body.game-berjalan .bnav { display: none; }   /* disembunyikan saat sedang bermain agar tidak tersentuh tak sengaja */
+body.nav-aktif { padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)); }
+
+.bnav-bar {
+    pointer-events: auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    padding: 0.45rem 0.4rem 0.4rem;
+    background: rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 1.75rem;
+    box-shadow: 0 14px 34px -10px rgba(15, 23, 42, 0.32), 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+.bnav-item {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.18rem;
+    padding: 0.15rem 0 0;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: #94a3b8;            /* slate-400 */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: color 200ms ease;
+}
+.bnav-item[hidden] { display: none; }
+.bnav-item:focus-visible { outline: 2px solid #0284c7; outline-offset: 2px; border-radius: 1rem; }
+.bnav-ikon {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 320ms cubic-bezier(.34, 1.56, .64, 1), background-color 200ms ease, box-shadow 260ms ease;
+}
+.bnav-ikon svg { width: 1.45rem; height: 1.45rem; }
+.bnav-label { font-size: 0.68rem; font-weight: 600; line-height: 1; padding-bottom: 0.1rem; transition: transform 320ms cubic-bezier(.34, 1.56, .64, 1), color 200ms ease; }
+.bnav-item:not(.aktif):hover { color: #64748b; }
+.bnav-item:active .bnav-ikon { transform: scale(0.86); }
+
+/* Tombol aktif: lingkaran berwarna yang terangkat keluar dari bar */
+.bnav-item.aktif { color: #0369a1; }
+.bnav-item.aktif .bnav-ikon {
+    background: linear-gradient(145deg, #38bdf8, #0369a1);
+    color: #fff;
+    transform: translateY(-0.85rem) scale(1.1);
+    box-shadow: 0 10px 20px -6px rgba(3, 105, 161, 0.6), 0 0 0 5px rgba(255, 255, 255, 0.95);
+    animation: bnav-lompat 420ms cubic-bezier(.34, 1.56, .64, 1);
+}
+.bnav-item.aktif .bnav-label { transform: translateY(-0.55rem); font-weight: 700; }
+.bnav-item.aktif:active .bnav-ikon { transform: translateY(-0.85rem) scale(0.95); }
+
+@keyframes bnav-lompat {
+    0%   { transform: translateY(0) scale(0.8); }
+    55%  { transform: translateY(-1.15rem) scale(1.18); }
+    100% { transform: translateY(-0.85rem) scale(1.1); }
+}
+@keyframes bnav-masuk {
+    from { opacity: 0; transform: translateX(-50%) translateY(1.5rem); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .bnav-ikon, .bnav-label, .bnav-item { transition: none; }
+    .bnav-item.aktif .bnav-ikon { animation: none; }
+    body.nav-aktif .bnav { animation: none; }
+}

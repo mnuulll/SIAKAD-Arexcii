@@ -20,7 +20,8 @@ function showDashPage(name, fromPop = false) {
     // Sesi latihan yang sedang berjalan dibatalkan jika pengguna berpindah halaman (js/matdas.js)
     if (name !== 'matdas' && typeof matdasOnLeave === 'function') matdasOnLeave();
     if (name !== 'inggris' && typeof inggrisOnLeave === 'function') inggrisOnLeave();
-    const pages = { home: 'dash-home', info: 'page-tabungan-info', log: 'page-tabungan-log', role: 'page-role', utbk: 'page-utbk', matdas: 'page-matdas', inggris: 'page-inggris', minigames: 'page-minigames' };
+    if (typeof navSinkron === 'function') navSinkron(name);   // sorot tab navigasi bawah yang sesuai (js/nav.js)
+    const pages = { home: 'dash-home', info: 'page-tabungan-info', log: 'page-tabungan-log', role: 'page-role', utbk: 'page-utbk', matdas: 'page-matdas', inggris: 'page-inggris', minigames: 'page-minigames', profil: 'page-profil' };
     Object.entries(pages).forEach(([key, id]) => {
         const el = document.getElementById(id);
         if (el) el.classList.toggle('hidden', key !== name);
@@ -285,6 +286,7 @@ async function showDashboard() {
     // UTBK Corner: hanya tampil untuk siswa kelas UTBK (js/utbk.js)
     if (typeof setupUtbkLauncher === 'function') setupUtbkLauncher();
     if (typeof setupMiniGamesLauncher === 'function') setupMiniGamesLauncher();
+    if (typeof setupBottomNav === 'function') setupBottomNav();
 
     lucide.createIcons();
 }

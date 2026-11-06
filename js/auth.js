@@ -157,6 +157,7 @@ async function handleLogout() {
     if (typeof resetMatdasState === 'function') resetMatdasState();
     if (typeof resetInggrisState === 'function') resetInggrisState();
     if (typeof resetMiniGamesState === 'function') resetMiniGamesState();
+    if (typeof navSembunyikan === 'function') navSembunyikan();
 
     document.getElementById('login-card').classList.remove('hidden');
     document.getElementById('dashboard-view').classList.add('hidden');

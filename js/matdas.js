@@ -81,6 +81,99 @@ function mdMk(html, ekspresi, jawab, extra) {
 }
 
 // ====================================================================
+// PEMERIKSA TAMPILAN
+// Membaca ulang soal dari HTML yang BENAR-BENAR tampil di layar (bukan dari rumus pembuatnya),
+// menghitung jawabannya sendiri dengan pecahan eksak, lalu membandingkannya dengan jawaban yang
+// disimpan. Soal yang tidak cocok tidak akan dimunculkan (dibuat ulang).
+// ====================================================================
+function mdDesimalKeR(s) {
+    const [a, b = ''] = String(s).split('.');
+    return mdR(Number(a + b), 10 ** b.length);
+}
+function mdAngkaId(s) { return mdDesimalKeR(String(s).replace(/\./g, '').replace(',', '.')); }   // "1.234,5" -> 2469/2
+function mdAkarEksak(v, k) {
+    const ak = (n) => { const r = Math.round(Math.pow(n, 1 / k)); for (const c of [r - 1, r, r + 1]) if (c >= 0 && Math.pow(c, k) === n) return c; throw new Error('bukan pangkat sempurna'); };
+    return mdR(ak(v.n), ak(v.d));
+}
+function mdPangkatR(b, e) {
+    let n = 1, d = 1;
+    for (let i = 0; i < Math.abs(e); i++) { n *= b.n; d *= b.d; }
+    return e >= 0 ? mdR(n, d) : mdR(d, n);
+}
+function mdEvalEkspresi(t) {
+    let i = 0;
+    const pk = () => t[i];
+    const tutup = () => { if (t[i] !== ')') throw new Error('kurung'); i++; };
+    function atom() {
+        if (pk() === '(') { i++; const v = expr(); tutup(); return v; }
+        if (t.startsWith('sqrt(', i)) { i += 5; const v = expr(); tutup(); return mdAkarEksak(v, 2); }
+        if (t.startsWith('cbrt(', i)) { i += 5; const v = expr(); tutup(); return mdAkarEksak(v, 3); }
+        const m = /^\d+(\.\d+)?/.exec(t.slice(i));
+        if (!m) throw new Error('angka');
+        i += m[0].length;
+        return mdDesimalKeR(m[0]);
+    }
+    function pangkat() {
+        const b = atom();
+        if (pk() === '^') { i++; const e = unary(); if (e.d !== 1) throw new Error('pangkat'); return mdPangkatR(b, e.n); }
+        return b;
+    }
+    function unary() { if (pk() === '-') { i++; const v = unary(); return mdR(-v.n, v.d); } return pangkat(); }
+    function term() {
+        let v = unary();
+        while (pk() === '*' || pk() === '/') { const op = t[i++]; const w = unary(); v = op === '*' ? mdMul(v, w) : mdDiv(v, w); }
+        return v;
+    }
+    function expr() {
+        let v = term();
+        while (pk() === '+' || pk() === '-') { const op = t[i++]; const w = term(); v = op === '+' ? mdAdd(v, w) : mdSub(v, w); }
+        return v;
+    }
+    const v = expr();
+    if (i !== t.length) throw new Error('sisa');
+    return v;
+}
+
+// HTML soal -> teks ekspresi yang bisa dihitung. Pecahan jadi (a/b), akar jadi sqrt()/cbrt(), pangkat jadi ^(..)
+function mdTampilanKeTeks(html) {
+    let s = String(html);
+    s = s.replace(/<span style="display:inline-flex[^>]*><span[^>]*>([^<]*)<\/span><span[^>]*>([^<]*)<\/span><\/span>/g, '($1/$2)');
+    s = s.replace(/<span style="white-space:nowrap">(?:<sup[^>]*>(\d+)<\/sup>)?<span[^>]*>√<\/span><span[^>]*>([^<]*)<\/span><\/span>/g,
+        (m, idx, isi) => (idx === '3' ? 'cbrt(' : 'sqrt(') + isi + ')');
+    s = s.replace(/<sup[^>]*>([^<]*)<\/sup>/g, '^($1)');
+    return s.replace(/<[^>]+>/g, '');
+}
+function mdNormalisasi(teks) {
+    return teks.replace(/−/g, '-').replace(/×/g, '*').replace(/÷/g, '/').replace(/\s+/g, '').replace(/\./g, '').replace(/,/g, '.');
+}
+// Soal berbentuk kalimat: dibaca menurut kerangka kalimatnya
+function mdEvalKalimat(t) {
+    const N = '([\\d.,]+)';
+    let m;
+    if ((m = new RegExp(`^${N}% dari suatu bilangan adalah ${N}\\.`).exec(t))) return mdDiv(mdMul(mdAngkaId(m[2]), mdR(100)), mdAngkaId(m[1]));
+    if ((m = new RegExp(`^${N}% dari ${N}$`).exec(t))) return mdDiv(mdMul(mdAngkaId(m[2]), mdAngkaId(m[1])), mdR(100));
+    if ((m = new RegExp(`^${N} adalah berapa persen dari ${N}\\?$`).exec(t))) return mdMul(mdDiv(mdAngkaId(m[1]), mdAngkaId(m[2])), mdR(100));
+    if ((m = new RegExp(`^Harga barang Rp${N} didiskon ${N}%\\.`).exec(t))) return mdDiv(mdMul(mdAngkaId(m[1]), mdSub(mdR(100), mdAngkaId(m[2]))), mdR(100));
+    if ((m = new RegExp(`^Gaji Rp${N} naik ${N}%\\.`).exec(t))) return mdDiv(mdMul(mdAngkaId(m[1]), mdAdd(mdR(100), mdAngkaId(m[2]))), mdR(100));
+    if ((m = /^Sederhanakan (\(\d+\/\d+\))$/.exec(t))) return mdEvalEkspresi(m[1]);
+    if ((m = /^Ubah (\(\d+\/\d+\)) ke desimal$/.exec(t))) return mdEvalEkspresi(m[1]);
+    if ((m = new RegExp(`^Ubah ${N} ke pecahan paling sederhana$`).exec(t))) return mdAngkaId(m[1]);
+    if ((m = new RegExp(`^(\\(\\d+/\\d+\\)) dari ${N}$`).exec(t))) return mdMul(mdEvalEkspresi(m[1]), mdAngkaId(m[2]));
+    return null;   // kerangka kalimat tak dikenal: tidak diverifikasi
+}
+// true = tampilan & jawaban cocok, false = TIDAK cocok, null = tidak bisa diverifikasi
+function mdVerifikasiTampilan(q) {
+    try {
+        const teks = mdTampilanKeTeks(q.html);
+        const nilai = /[A-Za-z]{3,}/.test(teks.replace(/sqrt|cbrt/g, '')) ? mdEvalKalimat(teks) : mdEvalEkspresi(mdNormalisasi(teks));
+        if (!nilai) return null;
+        return nilai.n === q.jawab.n && nilai.d === q.jawab.d;
+    } catch (e) {
+        return null;
+    }
+}
+
+// ====================================================================
 // GENERATOR SOAL
 // ====================================================================
 const MD_GEN = {
@@ -354,6 +447,10 @@ function mdBuatSoal(daftarTopik, kesulitan, sudah) {
         const kes = kesulitan === 'acak' ? mdPick(['mudah', 'sedang', 'sulit']) : kesulitan;
         q = MD_GEN[tp][kes]();
         q.topik = tp; q.kes = kes;
+        if (mdVerifikasiTampilan(q) === false) {   // jaring pengaman: soal yang tampilannya tak cocok dengan jawabannya dibuang
+            console.warn('Soal dibuang (tampilan tidak cocok dengan jawaban):', q.ekspresi);
+            continue;
+        }
         if (!sudah || !sudah.has(q.html)) break;
     }
     if (sudah) sudah.add(q.html);
@@ -435,6 +532,7 @@ function mdHentikan() {
     if (md.timer) { clearInterval(md.timer); md.timer = null; }
     if (md.jeda) { clearTimeout(md.jeda); md.jeda = null; }
     document.removeEventListener('keydown', mdKey);
+    document.body.classList.remove('game-berjalan');
     md.kunci = false;
 }
 
@@ -601,6 +699,7 @@ function mdMulai() {
     md.q = mdBuatSoal([...md.topik], md.kes, md.sudah);
     md.tSoal = Date.now();
     mdHentikan();
+    document.body.classList.add('game-berjalan');
     md.timer = setInterval(mdTick, 200);
     document.addEventListener('keydown', mdKey);
     mdRender();
@@ -659,7 +758,7 @@ function mdTombol(k) {
 
 function mdCatat(benar, jawabUser) {
     md.hasil.push({
-        html: md.q.html, topik: md.q.topik, kes: md.q.kes, benar,
+        html: md.q.html, topik: md.q.topik, kes: md.q.kes, benar, ekspresi: md.q.ekspresi,
         jawabUser, jawabBenar: mdTampilJawab(md.q), detik: (Date.now() - md.tSoal) / 1000
     });
     const el = document.getElementById('md-benar');
@@ -759,7 +858,8 @@ function mdViewHasil() {
             <div class="divide-y divide-slate-100">${salah.map(h => `
                 <div class="py-3"><div class="text-lg font-bold text-slate-900 tabular-nums break-words">${h.html}</div>
                 <p class="text-sm mt-1"><span class="text-slate-500">Jawabanmu:</span> <span class="font-semibold text-rose-600">${escapeHtml(h.jawabUser)}</span>
-                <span class="text-slate-500 ml-3">Benar:</span> <span class="font-semibold text-emerald-600">${escapeHtml(h.jawabBenar)}</span></p></div>`).join('')}</div></div>` : '';
+                <span class="text-slate-500 ml-3">Benar:</span> <span class="font-semibold text-emerald-600">${escapeHtml(h.jawabBenar)}</span></p>
+                <button type="button" onclick="mdSalinDetail(${md.hasil.indexOf(h)})" class="mt-1.5 text-xs font-semibold text-slate-400 hover:text-primary-700 underline">Soal ini keliru? Salin detail</button></div>`).join('')}</div></div>` : '';
     const judul = r.rekorBaru ? (r.pertama ? 'Sesi pertama di mode ini' : 'Rekor baru') : 'Selesai';
     const sub = md.mode === 'waktu'
         ? `${r.benar} soal benar dalam ${r.batas} menit`
@@ -783,6 +883,20 @@ function mdViewHasil() {
             <button type="button" onclick="mdMulai()" class="px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm flex items-center justify-center gap-2"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Main lagi</button>
         </div>
     </div>`;
+}
+
+// Menyalin detail satu soal supaya bisa ditempel dan dilaporkan kalau ada soal yang janggal
+function mdSalinDetail(i) {
+    const h = md.hasil[i];
+    if (!h) return;
+    const teks = ['Laporan soal matematika',
+        `Soal: ${mdNormalisasi(mdTampilanKeTeks(h.html))}`,
+        `Jawabanku: ${h.jawabUser}`, `Jawaban sistem: ${h.jawabBenar}`,
+        `Rumus: ${h.ekspresi}`, `Topik: ${h.topik}, tingkat ${h.kes}`,
+        `Versi aplikasi: ${typeof APP_VERSI !== 'undefined' ? APP_VERSI : '-'}`].join('\n');
+    const ok = () => mgToast('Detail soal disalin. Tempel ke chat.');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(teks).then(ok).catch(() => window.prompt('Salin teks ini:', teks));
+    else window.prompt('Salin teks ini:', teks);
 }
 
 function mdKePengaturan() { md.fase = 'setup'; md.tab = 'latih'; mdRender(); window.scrollTo({ top: 0 }); }

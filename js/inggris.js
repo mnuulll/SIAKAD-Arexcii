@@ -99,6 +99,7 @@ function ingHentikan() {
     if (ing.timer) { clearInterval(ing.timer); ing.timer = null; }
     if (ing.jeda) { clearTimeout(ing.jeda); ing.jeda = null; }
     document.removeEventListener('keydown', ingKey);
+    document.body.classList.remove('game-berjalan');
     ing.kunci = false;
 }
 // Dipanggil showDashPage() saat berpindah dari halaman game: sesi yang berjalan dibatalkan
@@ -208,6 +209,7 @@ function ingMulai() {
     ing.q = ingBuatSoal(ing.kes, ing.arah, ing.sudah);
     ing.tSoal = Date.now();
     ingHentikan();
+    document.body.classList.add('game-berjalan');
     ing.timer = setInterval(ingTick, 200);
     document.addEventListener('keydown', ingKey);
     ingRender();
