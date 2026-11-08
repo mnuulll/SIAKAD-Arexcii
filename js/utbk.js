@@ -1,6 +1,7 @@
 // ====================================================================
 // FITUR UTBK (khusus siswa kelas UTBK)
-//   Ringkasan | Try Out | Analisis | Target kampus | Info UTBK & kampus
+//   Try Out | Analisis | Target kampus | Info UTBK & kampus
+//   (Ringkasan tidak lagi jadi tab: tampil sebagai halaman Home khusus akun Umum)
 // Data try out & target disimpan di tabel utbk_tryout / utbk_target (RLS: hanya
 // pemilik data, dan hanya siswa kelas UTBK). Semua teks dari pengguna di-escape
 // dengan escapeHtml() (app.js) sebelum masuk ke innerHTML.
@@ -52,18 +53,22 @@ const UTBK_WARNA = { garis: '#0284c7', rata: '#7dd3fc', target: '#d97706', grid:
 const utbkState = {
     loading: false, loaded: false, error: null,
     tryouts: [], targets: [],
-    tab: 'ringkasan', editingId: null, editingSlot: null,
+    tab: 'tryout', editingId: null, editingSlot: null,
     chartSubtes: 'auto', ptnFilter: '', analisisTarget: null, formPtn: ''
 };
 
 function resetUtbkState() {
     Object.assign(utbkState, {
         loading: false, loaded: false, error: null, tryouts: [], targets: [],
-        tab: 'ringkasan', editingId: null, editingSlot: null, chartSubtes: 'auto', ptnFilter: '',
+        tab: 'tryout', editingId: null, editingSlot: null, chartSubtes: 'auto', ptnFilter: '',
         analisisTarget: null, formPtn: ''
     });
     const root = document.getElementById('utbk-root');
     if (root) root.innerHTML = '';
+    const homeRoot = document.getElementById('umum-home-root');
+    if (homeRoot) homeRoot.innerHTML = '';
+    const homeArexcii = document.getElementById('home-utbk-root');
+    if (homeArexcii) homeArexcii.innerHTML = '';
 }
 
 // ---------- Helper umum ----------
@@ -86,7 +91,7 @@ function utbkTglPendek(iso) {
     const [y, m, d] = String(iso).split('-').map(Number);
     return new Date(y, m - 1, d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
-function utbkHariIni() { return new Date().toLocaleDateString('en-CA'); }   // YYYY-MM-DD (waktu lokal)
+function utbkHariIni() { return wibTanggalIso(); }   // YYYY-MM-DD (WIB)
 function utbkMean(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null; }
 function utbkStd(arr) {
     if (arr.length < 2) return null;
@@ -152,9 +157,8 @@ function utbkStatusTarget(terbobot, minimal) {
 }
 function utbkHariMenujuUjian() {
     const [y, m, d] = UTBK_JADWAL.ujianMulaiPerkiraan.split('-').map(Number);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return Math.round((new Date(y, m - 1, d) - today) / 86400000);
+    const [ty, tm, td] = wibTanggalIso().split('-').map(Number);   // hari ini menurut WIB
+    return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(ty, tm - 1, td)) / 86400000);
 }
 function utbkDeltaChip(delta, satuan = '') {
     if (delta === null || delta === undefined || isNaN(delta)) return '';
@@ -178,19 +182,7 @@ function utbkToast(msg) {
     utbkToast._t = setTimeout(() => { el.style.opacity = '0'; }, 2400);
 }
 
-// ---------- Tombol masuk di dashboard ----------
-function setupUtbkLauncher() {
-    const el = document.getElementById('utbk-launcher');
-    if (!el) return;
-    const ok = utbkIsEligible();
-    el.classList.toggle('hidden', !ok);
-    if (!ok) return;
-    const hari = utbkHariMenujuUjian();
-    document.getElementById('utbk-launcher-sub').innerText = hari > 0
-        ? `Sekitar ${hari} hari lagi menuju UTBK 2027 (perkiraan). Catat try out, lihat grafik, dan cari info kampus.`
-        : 'Catat try out, lihat grafik, dan cari info kampus.';
-}
-
+// ---------- Membuka halaman UTBK Corner (dipanggil dari navigasi bawah) ----------
 async function openUtbkPage(tab) {
     if (!utbkIsEligible()) return;
     if (tab) utbkState.tab = tab;
@@ -198,6 +190,49 @@ async function openUtbkPage(tab) {
     utbkRender();
     await utbkLoadData();
     utbkRender();
+}
+
+// ---------- Home akun Umum: ringkasan UTBK ----------
+async function openUtbkHome() {
+    if (!utbkIsEligible()) return;
+    showDashPage('home');
+    utbkRenderHome();
+    await utbkLoadData();           // selalu muat ulang agar angka terbaru
+    utbkRenderHome();
+}
+
+// Home akun Arexcii (kelas UTBK): ringkasan UTBK sebagai tambahan di bawah isi Home biasa
+async function utbkMuatHomeArexcii() {
+    const section = document.getElementById('base-utbk-section');
+    if (!section) return;
+    const tampil = !isAkunUmum() && utbkIsEligible();
+    section.classList.toggle('hidden', !tampil);
+    if (!tampil) return;
+    utbkRenderHome();
+    await utbkLoadData();
+    utbkRenderHome();
+}
+
+function utbkRenderHome() {
+    const root = isAkunUmum()
+        ? document.getElementById('umum-home-root')
+        : document.getElementById('home-utbk-root');
+    if (!root) return;
+    let body;
+    if (utbkState.error) {
+        body = `<div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            <p class="font-semibold">${escapeHtml(utbkState.error)}</p>
+            <button type="button" onclick="isAkunUmum() ? openUtbkHome() : utbkMuatHomeArexcii()" class="mt-3 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">Coba lagi</button>
+        </div>`;
+    } else if (!utbkState.loaded) {
+        body = `<div class="py-10 text-center text-sm text-slate-400 flex flex-col items-center gap-2">
+            <i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i> Memuat data UTBK...
+        </div>`;
+    } else {
+        body = utbkViewRingkasan();
+    }
+    root.innerHTML = body;
+    lucide.createIcons();
 }
 
 async function utbkLoadData() {
@@ -222,6 +257,9 @@ async function utbkLoadData() {
 }
 
 function utbkSwitchTab(tab) {
+    // Dipanggil dari ringkasan di Home (akun Umum): buka halaman UTBK pada tab yang dituju
+    const halamanUtbk = document.getElementById('page-utbk');
+    if (halamanUtbk && halamanUtbk.classList.contains('hidden')) { openUtbkPage(tab); return; }
     utbkState.tab = tab;
     if (tab !== 'tryout') utbkState.editingId = null;
     if (tab !== 'target') utbkState.editingSlot = null;
@@ -235,7 +273,6 @@ function utbkRender() {
     if (!root) return;
 
     const tabs = [
-        ['ringkasan', 'Ringkasan', 'layout-dashboard'],
         ['tryout', 'Try out', 'clipboard-list'],
         ['analisis', 'Analisis', 'trending-up'],
         ['target', 'Target kampus', 'target'],
@@ -261,12 +298,11 @@ function utbkRender() {
         </div>`;
     } else {
         body = ({
-            ringkasan: utbkViewRingkasan,
             tryout: utbkViewTryout,
             analisis: utbkViewAnalisis,
             target: utbkViewTarget,
             info: utbkViewInfo
-        }[utbkState.tab] || utbkViewRingkasan)();
+        }[utbkState.tab] || utbkViewTryout)();
     }
 
     root.innerHTML = `

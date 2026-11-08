@@ -50,7 +50,7 @@ function mgFmtWaktu(detik) {
     return `${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}`;
 }
 function mgFmtTgl(iso) {
-    return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    return fmtTgl(iso, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 function mgFmtAngka(n) { return Number(n).toLocaleString('id-ID'); }
 function mgLabelMode(mode, batas) { return mode === 'waktu' ? `Time attack ${batas} menit` : `${batas} soal`; }
@@ -168,14 +168,8 @@ function mgViewRiwayat(game) {
 }
 
 // ====================================================================
-// PELUNCUR & HUB
+// HUB (dibuka dari navigasi bawah)
 // ====================================================================
-function setupMiniGamesLauncher() {
-    const el = document.getElementById('minigames-launcher');
-    if (!el) return;
-    el.classList.toggle('hidden', !(activeUser && activeUser.role !== 'wali_kelas'));
-}
-
 async function openMiniGames() {
     if (!activeUser) return;
     mg.view = 'hub';

@@ -7,7 +7,7 @@
 //   dan tabungan selalu diambil langsung dari server dan tidak masuk cache.
 // Naikkan CACHE_VERSION setiap kali ingin memaksa semua perangkat membuang cache lama.
 // ====================================================================
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v9';
 const SHELL_CACHE = 'siakad-shell-' + CACHE_VERSION;
 const CDN_CACHE = 'siakad-cdn-' + CACHE_VERSION;
 
@@ -17,6 +17,7 @@ const SHELL_FILES = [
   'css/style.css',
   'js/tailwind-config.js',
   'js/config.js',
+  'js/waktu.js',
   'js/app.js',
   'js/auth.js',
   'js/utbk.js',

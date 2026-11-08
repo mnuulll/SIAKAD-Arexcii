@@ -16,30 +16,34 @@ function escapeHtml(value) {
 // ====================================================================
 // MODAL TABUNGAN: Tombol Tabungan -> Informasi Tabungan -> Log Tabungan
 // ====================================================================
+// Akun "Umum" (jenis = 'umum') hanya punya UTBK Corner, Mini Games, dan Profil.
+function isAkunUmum() {
+    return !!activeUser && activeUser.jenis === 'umum';
+}
+
 function showDashPage(name, fromPop = false) {
+    // Akun Umum: "Home" adalah ringkasan UTBK (page-home-umum); halaman tabungan/panel tidak ada
+    const umum = isAkunUmum();
+    if (umum && ['home', 'info', 'log', 'role'].includes(name)) name = 'homeumum';
+
     // Sesi latihan yang sedang berjalan dibatalkan jika pengguna berpindah halaman (js/matdas.js)
     if (name !== 'matdas' && typeof matdasOnLeave === 'function') matdasOnLeave();
     if (name !== 'inggris' && typeof inggrisOnLeave === 'function') inggrisOnLeave();
+    tutupSemuaFitur();                                          // halaman fitur sekretaris/bendahara ditutup
     if (typeof navSinkron === 'function') navSinkron(name);   // sorot tab navigasi bawah yang sesuai (js/nav.js)
-    const pages = { home: 'dash-home', info: 'page-tabungan-info', log: 'page-tabungan-log', role: 'page-role', utbk: 'page-utbk', matdas: 'page-matdas', inggris: 'page-inggris', minigames: 'page-minigames', profil: 'page-profil' };
+    const cfgFitur = (!umum && activeUser) ? FEATURE_ROLE_CONFIG[activeUser.role] : null;
+    const pages = { fitur: cfgFitur ? cfgFitur.panelId : '__none__', home: 'dash-home', homeumum: 'page-home-umum', info: 'page-tabungan-info', log: 'page-tabungan-log', role: 'page-role', utbk: 'page-utbk', matdas: 'page-matdas', inggris: 'page-inggris', minigames: 'page-minigames', profil: 'page-profil' };
     Object.entries(pages).forEach(([key, id]) => {
         const el = document.getElementById(id);
         if (el) el.classList.toggle('hidden', key !== name);
     });
     window.scrollTo({ top: 0 });
-
-    // Tombol melayang (sekretaris/bendahara) disembunyikan di halaman tabungan,
-    // dan dimunculkan lagi saat kembali ke dashboard.
-    if (name === 'home') {
-        if (activeUser && FEATURE_ROLE_CONFIG[activeUser.role]) showFeatureBubbleForRole(activeUser.role);
-    } else {
-        hideFeatureBubble();
-    }
     lucide.createIcons();
 
     // Tombol Back di HP/browser ikut berfungsi sebagai "kembali ke dashboard"
     // (maksimal 1 entri riwayat: pindah antar halaman memakai replaceState).
-    if (!fromPop) {
+    // Akun Umum tidak punya Home, jadi tidak memakai riwayat ini.
+    if (!fromPop && !umum) {
         if (name !== 'home') {
             if (history.state && history.state.dashPage) history.replaceState({ dashPage: name }, '');
             else history.pushState({ dashPage: name }, '');
@@ -50,6 +54,7 @@ function showDashPage(name, fromPop = false) {
 }
 
 window.addEventListener('popstate', (e) => {
+    if (isAkunUmum()) return;
     showDashPage(e.state && e.state.dashPage ? e.state.dashPage : 'home', true);
 });
 
@@ -64,18 +69,18 @@ function closeTabunganPages() { showDashPage('home'); }
 // GANTI isinya sesuai jadwal seragam sekolah kalian yang sebenarnya.
 const SERAGAM_JADWAL = {
     non: {
-        1: { nama: 'Putih Abu-abu', ket: 'Seragam upacara lengkap (topi & dasi)' },
-        2: { nama: 'Putih Abu-abu', ket: '' },
-        3: { nama: 'Batik', ket: '' },
-        4: { nama: 'Pramuka', ket: '' },
-        5: { nama: 'Muslim / Baju Koko', ket: '' }
+        1: { nama: 'PSAS', ket: 'Seragam upacara lengkap (topi & dasi)', tema: 'bg-slate-700 border-slate-900' },
+        2: { nama: 'Batik', ket: '', tema: 'bg-amber-700 border-amber-900' },
+        3: { nama: 'Pramuka', ket: '', tema: 'bg-red-800 border-red-950' },
+        4: { nama: 'Pangsi / Adat', ket: '', tema: 'bg-zinc-900 border-black' },
+        5: { nama: 'Koko / Muslim', ket: '', tema: 'bg-emerald-700 border-emerald-900' }
     },
     utbk: {
-        1: { nama: 'Putih Abu-abu', ket: 'Seragam upacara lengkap (topi & dasi)' },
-        2: { nama: 'Putih Abu-abu', ket: '' },
-        3: { nama: 'Batik', ket: '' },
-        4: { nama: 'Pramuka', ket: '' },
-        5: { nama: 'Muslim / Baju Koko', ket: '' }
+        1: { nama: 'PSAS', ket: 'Seragam upacara lengkap (topi & dasi)', tema: 'bg-slate-700 border-slate-900' },
+        2: { nama: 'Batik', ket: '', tema: 'bg-amber-700 border-amber-900' },
+        3: { nama: 'Pramuka', ket: '', tema: 'bg-red-800 border-red-950' },
+        4: { nama: 'Pangsi / Adat', ket: '', tema: 'bg-zinc-900 border-black' },
+        5: { nama: 'Koko / Muslim', ket: '', tema: 'bg-emerald-700 border-emerald-900' }
     }
 };
 
@@ -92,13 +97,19 @@ function getKelasLabel(key) {
 
 function renderSeragamHariIni() {
     const kelasKey = getKelasKey(activeUser);
-    const today = new Date();
-    const dayIdx = today.getDay();
+    const sekarang = new Date();
+    const dayIdx = wibHari(sekarang);   // hari menurut WIB, bukan zona waktu perangkat
     // Kelas belum diatur -> pakai jadwal NON sebagai cadangan
     const info = (SERAGAM_JADWAL[kelasKey || 'non'] || {})[dayIdx];
 
+    const kartu = document.getElementById('base-seragam-section');
+    if (kartu) {
+        // Warna kartu mengikuti seragam hari ini (teks putih di atas warna pekat = kontras tinggi)
+        const wasHidden = kartu.classList.contains('hidden');
+        kartu.className = 'rounded-2xl shadow-md p-5 text-white border-2 ' + (info ? info.tema : 'bg-slate-600 border-slate-800') + (wasHidden ? ' hidden' : '');
+    }
     document.getElementById('seragam-hari').innerText =
-        '(' + today.toLocaleDateString('id-ID', { weekday: 'long' }) + ')';
+        '(' + fmtTgl(sekarang, { weekday: 'long' }) + ')';
     document.getElementById('seragam-nama').innerText = info ? info.nama : 'Libur / tidak ada seragam';
     document.getElementById('seragam-ket').innerText = info ? (info.ket || '') : '';
     document.getElementById('seragam-kelas-badge').innerText = getKelasLabel(kelasKey);
@@ -201,16 +212,15 @@ function populateRoleDropdowns(siswaListRaw) {
 // ====================================================================
 // 4. VIEW RENDERING ENGINE (THEMING & RENDERING CARD)
 // ====================================================================
-// Konfigurasi bubble fitur untuk tiap role sekretaris/bendahara.
+// Konfigurasi fitur untuk tiap role sekretaris/bendahara (tampil sebagai tab di navigasi bawah).
 // prefix -> dipakai untuk cari panel halaman (feature-page) & fungsi loadnya.
 const FEATURE_ROLE_CONFIG = {
-    'sekretaris': { prefix: 'sekretaris', panelId: 'panel-sekretaris', icon: 'clipboard-signature', color: '#0284c7', loadFn: () => loadSekretarisPanel() },
-    'bendahara_tabungan_villa': { prefix: 'villa', panelId: 'panel-bendahara-villa', icon: 'palmtree', color: '#f59e0b', loadFn: () => loadBendaharaVillaPanel() },
-    'bendahara_tabungan': { prefix: 'tabungan', panelId: 'panel-bendahara-tabungan', icon: 'piggy-bank', color: '#0ea5e9', loadFn: () => loadBendaharaTabunganPanel() },
-    'bendahara_tabungan_yearbook': { prefix: 'yearbook', panelId: 'panel-bendahara-yearbook', icon: 'book-image', color: '#a855f7', loadFn: () => loadBendaharaYearbookPanel() },
-    'bendahara_tabungan_kas': { prefix: 'kas', panelId: 'panel-bendahara-kas', icon: 'wallet', color: '#10b981', loadFn: () => loadBendaharaKasPanel() },
+    'sekretaris': { label: 'Absensi', prefix: 'sekretaris', panelId: 'panel-sekretaris', icon: 'clipboard-signature', color: '#0284c7', loadFn: () => loadSekretarisPanel() },
+    'bendahara_tabungan_villa': { label: 'Villa', prefix: 'villa', panelId: 'panel-bendahara-villa', icon: 'palmtree', color: '#f59e0b', loadFn: () => loadBendaharaVillaPanel() },
+    'bendahara_tabungan': { label: 'Tabungan', prefix: 'tabungan', panelId: 'panel-bendahara-tabungan', icon: 'piggy-bank', color: '#0ea5e9', loadFn: () => loadBendaharaTabunganPanel() },
+    'bendahara_tabungan_yearbook': { label: 'Yearbook', prefix: 'yearbook', panelId: 'panel-bendahara-yearbook', icon: 'book-image', color: '#a855f7', loadFn: () => loadBendaharaYearbookPanel() },
+    'bendahara_tabungan_kas': { label: 'Kas', prefix: 'kas', panelId: 'panel-bendahara-kas', icon: 'wallet', color: '#10b981', loadFn: () => loadBendaharaKasPanel() },
 };
-let activeFeatureBubbleConfig = null; // config role yang sedang aktif untuk bubble
 
 async function showDashboard() {
     // Sembunyikan form login, tampilkan dashboard
@@ -219,13 +229,28 @@ async function showDashboard() {
 
     // Set Header Profiles
     document.getElementById('user-display-name').innerText = activeUser.nama;
-    document.getElementById('user-display-role').innerText = getReadableRole(activeUser.role);
+    const isUmum = isAkunUmum();
+    document.getElementById('user-display-role').innerText = getRoleLabelUser(activeUser);
     const kelasBadge = document.getElementById('user-display-kelas');
     if (kelasBadge) {
         kelasBadge.innerText = getKelasLabel(getKelasKey(activeUser));
-        kelasBadge.classList.toggle('hidden', activeUser.role === 'wali_kelas');
+        kelasBadge.classList.toggle('hidden', activeUser.role === 'wali_kelas' || isUmum);
     }
+    const gantiLabel = document.getElementById('header-ganti-pin-label');
+    if (gantiLabel) gantiLabel.innerText = isUmum ? 'Ganti Sandi' : 'Ganti PIN';
     document.getElementById('user-avatar-text').innerText = activeUser.nama.substring(0, 2).toUpperCase();
+
+    // Akun Umum: tidak ada absensi, tabungan, pengumuman, maupun panel apa pun.
+    // Isinya: Home (ringkasan UTBK), UTBK Corner, Mini Games, dan Profil (lewat navigasi bawah).
+    if (isUmum) {
+        hideAllRolePanels();
+        document.getElementById('dash-home').classList.add('hidden');
+        if (typeof setupBottomNav === 'function') setupBottomNav();
+        lucide.createIcons();
+        await openUtbkHome();
+        return;
+    }
+    document.getElementById('dash-home').classList.remove('hidden');
 
     // Wali Kelas: dashboard-nya berbeda sendiri, tidak menampilkan papan pengumuman,
     // stats pribadi, absen subuh pribadi, maupun riwayat tabungan/kalender pribadi.
@@ -256,7 +281,6 @@ async function showDashboard() {
     if (isKetuaAtauAdmin) {
         // Ketua / Wakil Ketua / Admin: panel jadi tombol. Menekan tombol membuka halaman panelnya.
         rolePanel.classList.add('hidden');
-        hideFeatureBubble();
 
         document.getElementById('role-launcher').classList.remove('hidden');
         document.getElementById('launch-ketua').classList.remove('hidden');
@@ -265,7 +289,6 @@ async function showDashboard() {
     } else if (activeUser.role === 'wali_kelas') {
         // Wali Kelas: tetap tampil inline di dashboard (hanya monitoring ringkas)
         rolePanel.classList.remove('hidden');
-        hideFeatureBubble();
 
         document.getElementById('role-panel-title').innerText = "Panel Monitor Wali Kelas";
         document.getElementById('role-panel-icon').setAttribute('data-lucide', 'user-check');
@@ -273,20 +296,17 @@ async function showDashboard() {
         document.getElementById('panel-wali-kelas').classList.remove('hidden');
         await loadWaliKelasPanel();
         await loadWaliKelasSubuhRekap();
-    } else if (FEATURE_ROLE_CONFIG[activeUser.role]) {
-        // Sekretaris & bendahara: tidak ada panel inline, cukup bubble melayang
-        rolePanel.classList.add('hidden');
-        showFeatureBubbleForRole(activeUser.role);
     } else {
-        // Anggota biasa
+        // Anggota biasa, Sekretaris, dan Bendahara: tidak ada panel inline di Home.
+        // (Sekretaris & Bendahara membuka fiturnya lewat tab di navigasi bawah.)
         rolePanel.classList.add('hidden');
-        hideFeatureBubble();
     }
 
-    // UTBK Corner: hanya tampil untuk siswa kelas UTBK (js/utbk.js)
-    if (typeof setupUtbkLauncher === 'function') setupUtbkLauncher();
-    if (typeof setupMiniGamesLauncher === 'function') setupMiniGamesLauncher();
+    // Navigasi bawah: Home, [fitur role], UTBK, Mini Games, Profil (js/nav.js)
     if (typeof setupBottomNav === 'function') setupBottomNav();
+
+    // Ringkasan UTBK di Home (akun Arexcii kelas UTBK)
+    if (typeof utbkMuatHomeArexcii === 'function') utbkMuatHomeArexcii();
 
     lucide.createIcons();
 }
@@ -325,168 +345,60 @@ async function openRolePage(which) {
     lucide.createIcons();
 }
 
-// Menampilkan bubble melayang sesuai role aktif (ikon & warna menyesuaikan)
-function showFeatureBubbleForRole(role) {
-    const config = FEATURE_ROLE_CONFIG[role];
-    const bubble = document.getElementById('feature-bubble');
-    if (!config || !bubble) return;
-
-    activeFeatureBubbleConfig = config;
-    bubble.style.backgroundColor = config.color;
-    bubble.classList.remove('hidden', 'is-tapped', 'is-dragging');
-
-    const oldIcon = bubble.querySelector('svg, i');
-    const fresh = document.createElement('i');
-    fresh.id = 'feature-bubble-icon';
-    fresh.setAttribute('data-lucide', config.icon);
-    if (oldIcon) oldIcon.replaceWith(fresh); else bubble.appendChild(fresh);
-}
-
-function hideFeatureBubble() {
-    const bubble = document.getElementById('feature-bubble');
-    if (bubble) bubble.classList.add('hidden');
-    activeFeatureBubbleConfig = null;
-}
-
 function hideAllRolePanels() {
     document.getElementById('panel-ketua').classList.add('hidden');
     document.getElementById('panel-wali-kelas').classList.add('hidden');
     document.getElementById('panel-admin-siswa').classList.add('hidden');
     const launcher = document.getElementById('role-launcher');
     if (launcher) launcher.classList.add('hidden');
-    const utbkLauncher = document.getElementById('utbk-launcher');
-    if (utbkLauncher) utbkLauncher.classList.add('hidden');
-    const miniGamesLauncher = document.getElementById('minigames-launcher');
-    if (miniGamesLauncher) miniGamesLauncher.classList.add('hidden');
     ['launch-ketua', 'launch-siswa'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
 
     // Semua "halaman fitur" (sekretaris & bendahara) ditutup kembali ke dashboard
+    tutupSemuaFitur();
+}
+
+// Tutup semua halaman fitur (sekretaris & bendahara) yang sedang terbuka.
+function tutupSemuaFitur() {
     Object.values(FEATURE_ROLE_CONFIG).forEach(config => {
         const page = document.getElementById(config.panelId);
         if (page) page.classList.add('hidden');
     });
 }
 
-// Dipanggil saat bubble melayang di-tap (bukan diseret): bubble menyusut +
-// ikonnya berputar sebentar seperti loading (mirip transisi tombol login),
-// baru setelah itu halaman fitur (full page, terpisah dari dashboard) dibuka.
-async function bukaFitur(prefix, loadFn, bubbleEl) {
-    if (bubbleEl) {
-        bubbleEl.classList.add('is-tapped');
-        const iconEl = bubbleEl.querySelector('#feature-bubble-icon, svg, i');
-        if (iconEl) {
-            iconEl.setAttribute('data-lucide', 'loader-2');
-            lucide.createIcons();
-            const spinnerEl = bubbleEl.querySelector('svg') || bubbleEl.querySelector('#feature-bubble-icon');
-            if (spinnerEl) {
-                spinnerEl.id = 'feature-bubble-icon';
-                spinnerEl.classList.add('is-spinning');
-            }
-        }
-    }
-
-    // Jeda singkat supaya efek "tertekan" terasa sebelum halaman baru muncul
-    await new Promise(resolve => setTimeout(resolve, 300));
-
+// Dipanggil saat tab fitur di navigasi bawah ditekan (Absensi / Villa / Tabungan / Yearbook / Kas).
+// Halaman fitur terbuka sebagai halaman penuh; navigasi bawah tetap terlihat.
+async function openFiturRole() {
+    if (!activeUser || isAkunUmum()) return;
     const config = FEATURE_ROLE_CONFIG[activeUser.role];
     if (!config) return;
 
-    document.getElementById(config.panelId).classList.remove('hidden');
-    lucide.createIcons();
-    await loadFn();
+    showDashPage('fitur');   // halaman biasa seperti UTBK / Mini Games; kembali lewat navigasi bawah
+    await config.loadFn();
 
-    if (prefix === 'sekretaris') {
+    if (REKAP_TABUNGAN[config.prefix]) {
+        const sampaiIn = document.getElementById('rekap-bln-sampai-' + config.prefix);
+        if (sampaiIn && !sampaiIn.value) sampaiIn.value = rekapBulanIni();
+        const dariIn = document.getElementById('rekap-bln-' + config.prefix);
+        if (dariIn && !dariIn.value) dariIn.value = rekapBulanIni();
+        previewRekapTabungan(config.prefix);
+    }
+
+    if (config.prefix === 'sekretaris') {
         const rekapBulanInput = document.getElementById('rekap-bulan');
         if (rekapBulanInput && !rekapBulanInput.value) {
-            rekapBulanInput.value = new Date().toISOString().slice(0, 7); // "YYYY-MM"
-        }
-    }
-
-    if (bubbleEl) {
-        bubbleEl.classList.remove('is-tapped');
-        const spinnerEl = bubbleEl.querySelector('#feature-bubble-icon');
-        if (spinnerEl) {
-            spinnerEl.classList.remove('is-spinning');
-            spinnerEl.setAttribute('data-lucide', config.icon);
-            lucide.createIcons();
+            rekapBulanInput.value = wibBulanIni(); // "YYYY-MM" (WIB)
         }
     }
 }
 
-// Tombol "Kembali" di pojok kiri atas halaman fitur: menutup halaman,
-// kembali menampilkan dashboard (bubble melayang muncul lagi di pojok).
-function tutupFitur(prefix) {
-    const config = FEATURE_ROLE_CONFIG[activeUser.role];
-    if (config) {
-        document.getElementById(config.panelId).classList.add('hidden');
-    }
+// Label role untuk ditampilkan: akun Umum selalu tampil sebagai "Umum"
+function getRoleLabelUser(user) {
+    if (user && user.jenis === 'umum') return 'Umum';
+    return getReadableRole(user ? user.role : '');
 }
-
-// ============ DRAG & DROP UNTUK BUBBLE MELAYANG (seperti chat head) ============
-(function initFeatureBubbleDrag() {
-    const bubble = document.getElementById('feature-bubble');
-    if (!bubble) return;
-
-    let dragging = false;
-    let moved = false;
-    let startX = 0, startY = 0, startLeft = 0, startTop = 0;
-
-    bubble.addEventListener('pointerdown', (e) => {
-        dragging = true;
-        moved = false;
-        bubble.classList.add('is-dragging');
-
-        const rect = bubble.getBoundingClientRect();
-        startLeft = rect.left;
-        startTop = rect.top;
-        startX = e.clientX;
-        startY = e.clientY;
-
-        // Pindah dari posisi right/bottom ke left/top supaya perhitungan drag simpel
-        bubble.style.left = startLeft + 'px';
-        bubble.style.top = startTop + 'px';
-        bubble.style.right = 'auto';
-        bubble.style.bottom = 'auto';
-
-        bubble.setPointerCapture(e.pointerId);
-    });
-
-    bubble.addEventListener('pointermove', (e) => {
-        if (!dragging) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) moved = true;
-
-        const rect = bubble.getBoundingClientRect();
-        const maxLeft = window.innerWidth - rect.width - 4;
-        const maxTop = window.innerHeight - rect.height - 4;
-        const newLeft = Math.max(4, Math.min(startLeft + dx, maxLeft));
-        const newTop = Math.max(4, Math.min(startTop + dy, maxTop));
-
-        bubble.style.left = newLeft + 'px';
-        bubble.style.top = newTop + 'px';
-    });
-
-    function endDrag(e) {
-        if (!dragging) return;
-        dragging = false;
-        bubble.classList.remove('is-dragging');
-
-        if (!moved) {
-            // Tidak digeser sama sekali -> dianggap tap, buka halaman fitur
-            if (activeFeatureBubbleConfig) {
-                bukaFitur(activeFeatureBubbleConfig.prefix, activeFeatureBubbleConfig.loadFn, bubble);
-            }
-        }
-    }
-
-    bubble.addEventListener('pointerup', endDrag);
-    bubble.addEventListener('pointercancel', endDrag);
-})();
-
 
 function getReadableRole(role) {
     switch(role) {
@@ -519,7 +431,7 @@ async function loadBaseDashboardStats() {
     if (!supabaseClient) return;
 
     // 5.1 Absensi Hari Ini
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = wibTanggalIso();
     const { data: absenData } = await supabaseClient
         .from('absensi')
         .select('status')
@@ -541,8 +453,7 @@ async function loadBaseDashboardStats() {
     // (lihat HTML), jadi tidak perlu di-fetch/di-overwrite di sini.
 
     // 5.3 Kehadiran Bulan Ini (dari tanggal 1 bulan berjalan s.d. hari ini, reset tiap awal bulan)
-    const now2 = new Date();
-    const firstDayOfMonthStr = `${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, '0')}-01`;
+    const firstDayOfMonthStr = `${wibBulanIni()}-01`;
 
     const { count: hadirCount } = await supabaseClient
         .from('absensi')
@@ -597,7 +508,7 @@ async function loadSiswaNabungRiwayat() {
         supabaseClient.from('tabungan_yearbook').select('*').eq('siswa_id', activeUser.id)
     ]);
 
-    const byDateDesc = (a, b) => new Date(b.tanggal) - new Date(a.tanggal);
+    const byDateDesc = (a, b) => waktuParse(b.tanggal) - waktuParse(a.tanggal);
     logTabunganData = {
         Villa: (resVilla.data || []).slice().sort(byDateDesc),
         Yearbook: (resYearbook.data || []).slice().sort(byDateDesc)
@@ -639,7 +550,7 @@ function renderLogTabungan() {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition";
 
-        const formattedDate = new Date(item.tanggal).toLocaleString('id-ID', {
+        const formattedDate = fmtWaktu(item.tanggal, {
             day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
         });
         const badgeBg = item.jenis === 'setor' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
@@ -700,9 +611,9 @@ async function renderSiswaAttendanceCalendar() {
     }
 
     // Kalender bulan berjalan (otomatis mengikuti bulan & tahun saat ini)
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); // 0-indexed
+    const [bulanIniStr0, bulanIniStr1] = wibBulanIni().split('-').map(Number);
+    const year = bulanIniStr0;
+    const month = bulanIniStr1 - 1; // 0-indexed (bulan berjalan menurut WIB)
     const pad = (n) => n < 10 ? '0' + n : n;
 
     // Hari pertama bulan ini, dikonversi supaya Senin = 0 ... Minggu = 6
@@ -746,7 +657,7 @@ async function loadKetuaPanel() {
     if (!supabaseClient) return;
 
     // Total Kehadiran Hari ini (Hadir / Tidak)
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = wibTanggalIso();
     
     const { data: listAbsen } = await supabaseClient
         .from('absensi')
@@ -822,7 +733,7 @@ async function loadWaliKelasPanel() {
     if (!supabaseClient) return;
 
     // Rekap Absensi Hari Ini
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = wibTanggalIso();
 
     const { data: listAbsen } = await supabaseClient
         .from('absensi')
@@ -891,7 +802,7 @@ async function loadWaliKelasSubuhRekap() {
     getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama)).forEach(siswa => {
         const rec = subuhMap[siswa.id];
         const nilai = rec ? rec.nilai : null;
-        const jamStr = rec ? new Date(rec.jam_absen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+        const jamStr = rec ? fmtJam(rec.jam_absen) : '-';
 
         let badgeClass = 'bg-slate-100 text-slate-400';
         if (nilai === 'A') badgeClass = 'bg-emerald-100 text-emerald-800';
@@ -921,7 +832,7 @@ const SUBUH_BATAS_B = 4 * 60 + 30;       // 270 menit
 const SUBUH_WINDOW_END = 5 * 60;         // 300 menit
 
 function getSubuhMenit(date) {
-    return date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60;
+    return wibMenitHari(date);   // jendela absen subuh dihitung dalam WIB
 }
 
 // Mengembalikan 'A' / 'B' / 'C' jika sedang dalam jendela absen, atau null jika sudah/belum dibuka
@@ -934,9 +845,7 @@ function getSubuhNilaiSaatIni(date) {
 }
 
 function todayDateStr() {
-    const d = new Date();
-    const tz = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - tz).toISOString().split('T')[0];
+    return wibTanggalIso();
 }
 
 let subuhClockInterval = null;
@@ -989,8 +898,7 @@ async function loadMySubuhStatus() {
     subuhSudahAbsenHariIni = !!data;
 
     if (data) {
-        const jam = new Date(data.jam_absen);
-        const jamStr = jam.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        const jamStr = fmtJam(data.jam_absen);
         statusText.innerText = `Nilai ${data.nilai} (${jamStr})`;
         statusText.className = "text-lg font-bold mt-0.5 " + (data.nilai === 'A' ? 'text-emerald-700' : data.nilai === 'B' ? 'text-amber-700' : 'text-rose-700');
     } else {
@@ -1059,7 +967,7 @@ async function loadKetuaSubuhRekap() {
     getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama)).forEach(siswa => {
         const rec = subuhMap[siswa.id];
         const nilai = rec ? rec.nilai : null;
-        const jamStr = rec ? new Date(rec.jam_absen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
+        const jamStr = rec ? fmtJam(rec.jam_absen) : '-';
 
         let badgeClass = 'bg-slate-100 text-slate-400';
         if (nilai === 'A') badgeClass = 'bg-emerald-100 text-emerald-800';
@@ -1079,66 +987,86 @@ async function loadKetuaSubuhRekap() {
     });
 }
 
-// Download rekap absen subuh 1 bulan penuh (.xlsx) - hanya tombolnya muncul
+// ====================================================================
+// REKAP HARIAN RENTANG BULAN (dipakai rekap absensi & rekap absen subuh)
+// Satu sheet per bulan (kolom = tanggal 1..akhir bulan) + sheet "Ringkasan" bila lebih dari 1 bulan.
+// ====================================================================
+function rekapBangunWorkbookHarian({ daftar, siswa, petaPerBulan, kodeList, tanpaLabel, namaSheetRingkasan }) {
+    const wb = XLSX.utils.book_new();
+    const ringkas = {};   // siswaId -> { kode: n, tanpa: n }
+    siswa.forEach(s => { ringkas[s.id] = { tanpa: 0 }; kodeList.forEach(k => { ringkas[s.id][k] = 0; }); });
+
+    daftar.forEach(bulanStr => {
+        const [tahun, bulan] = bulanStr.split('-').map(Number);
+        const jumlahHari = new Date(tahun, bulan, 0).getDate();
+        const header = ['Nama Siswa', ...Array.from({ length: jumlahHari }, (_, i) => i + 1), ...kodeList.map(k => 'Total ' + k), ...(tanpaLabel ? [tanpaLabel] : [])];
+        const rows = [header];
+        siswa.forEach(s => {
+            const peta = (petaPerBulan[bulanStr] || {})[s.id] || {};
+            const kolomHari = Array.from({ length: jumlahHari }, (_, i) => peta[i + 1] || '-');
+            const total = {}; kodeList.forEach(k => { total[k] = 0; });
+            let tanpa = 0;
+            kolomHari.forEach(k => { if (total[k] !== undefined) total[k]++; else tanpa++; });
+            kodeList.forEach(k => { ringkas[s.id][k] += total[k]; });
+            ringkas[s.id].tanpa += tanpa;
+            rows.push([s.nama, ...kolomHari, ...kodeList.map(k => total[k]), ...(tanpaLabel ? [tanpa] : [])]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{ wch: 30 }, ...Array.from({ length: jumlahHari }, () => ({ wch: 4 })), ...kodeList.map(() => ({ wch: 9 })), ...(tanpaLabel ? [{ wch: 14 }] : [])];
+        XLSX.utils.book_append_sheet(wb, ws, waktuLabelBulan(bulanStr));
+    });
+
+    if (daftar.length > 1) {
+        const rows = [['Nama Siswa', ...kodeList.map(k => 'Total ' + k), ...(tanpaLabel ? [tanpaLabel] : [])]];
+        siswa.forEach(s => rows.push([s.nama, ...kodeList.map(k => ringkas[s.id][k]), ...(tanpaLabel ? [ringkas[s.id].tanpa] : [])]));
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{ wch: 30 }, ...kodeList.map(() => ({ wch: 9 })), ...(tanpaLabel ? [{ wch: 18 }] : [])];
+        XLSX.utils.book_append_sheet(wb, ws, namaSheetRingkasan);
+    }
+    return wb;
+}
+
+function rekapNamaFileRentang(awalNama, daftar) {
+    return daftar.length > 1 ? `${awalNama}_${daftar[0]}_sd_${daftar[daftar.length - 1]}.xlsx` : `${awalNama}_${daftar[0]}.xlsx`;
+}
+function rekapRentangTanggal(daftar) {
+    const [t, b] = daftar[daftar.length - 1].split('-').map(Number);
+    return { awal: `${daftar[0]}-01`, akhir: `${daftar[daftar.length - 1]}-${String(new Date(t, b, 0).getDate()).padStart(2, '0')}` };
+}
+
+// Download rekap absen subuh untuk satu bulan atau rentang bulan (.xlsx) - hanya tombolnya muncul
 // di panel Ketua/Wakil Ketua/Admin, jadi otomatis role lain tidak bisa mengaksesnya.
 async function downloadRekapSubuh() {
     if (!supabaseClient) return;
+    const rentang = rekapBacaRentang('subuh-rekap-bulan', 'subuh-rekap-bulan-sampai');
+    if (rentang.galat) { alert(rentang.galat); return; }
+    const { daftar } = rentang;
+    const { awal, akhir } = rekapRentangTanggal(daftar);
 
-    const bulanInput = document.getElementById('subuh-rekap-bulan').value; // "2026-07"
-    if (!bulanInput) {
-        alert("Silakan pilih bulan rekap terlebih dahulu.");
+    let data;
+    try {
+        data = await rekapAmbilBanyak(() => supabaseClient
+            .from('absensi_subuh')
+            .select('siswa_id, tanggal, jam_absen, nilai')
+            .gte('tanggal', awal).lte('tanggal', akhir)
+            .order('tanggal', { ascending: true }).order('siswa_id', { ascending: true }));
+    } catch (error) {
+        alert("Gagal mengambil data rekap: " + (error.message || error));
         return;
     }
 
-    const [tahun, bulan] = bulanInput.split('-').map(Number);
-    const jumlahHari = new Date(tahun, bulan, 0).getDate();
-    const tanggalAwal = `${bulanInput}-01`;
-    const tanggalAkhir = `${bulanInput}-${String(jumlahHari).padStart(2, '0')}`;
-
-    const { data, error } = await supabaseClient
-        .from('absensi_subuh')
-        .select('siswa_id, tanggal, jam_absen, nilai')
-        .gte('tanggal', tanggalAwal)
-        .lte('tanggal', tanggalAkhir);
-
-    if (error) {
-        alert("Gagal mengambil data rekap: " + error.message);
-        return;
-    }
-
-    const rekapMap = {}; // { siswaId: { hari: 'A'|'B'|'C' } }
-    (data || []).forEach(item => {
-        const hari = new Date(item.tanggal).getDate();
-        if (!rekapMap[item.siswa_id]) rekapMap[item.siswa_id] = {};
-        rekapMap[item.siswa_id][hari] = item.nilai;
+    const petaPerBulan = {};   // { 'YYYY-MM': { siswaId: { hari: 'A'|'B'|'C' } } }
+    data.forEach(item => {
+        const bln = String(item.tanggal).slice(0, 7);
+        const hari = Number(String(item.tanggal).slice(8, 10));
+        const bulanMap = petaPerBulan[bln] || (petaPerBulan[bln] = {});
+        if (!bulanMap[item.siswa_id]) bulanMap[item.siswa_id] = {};
+        bulanMap[item.siswa_id][hari] = item.nilai;
     });
 
-    const header = ['Nama Siswa', ...Array.from({ length: jumlahHari }, (_, i) => i + 1), 'Total A', 'Total B', 'Total C', 'Total Tanpa Absen'];
-    const rows = [header];
-
-    getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama)).forEach(siswa => {
-        const rekapSiswa = rekapMap[siswa.id] || {};
-        const kolomHari = Array.from({ length: jumlahHari }, (_, i) => rekapSiswa[i + 1] || '-');
-        const totalPerNilai = { A: 0, B: 0, C: 0 };
-        let tanpaAbsen = 0;
-        kolomHari.forEach(k => {
-            if (totalPerNilai[k] !== undefined) totalPerNilai[k]++;
-            else tanpaAbsen++;
-        });
-
-        rows.push([siswa.nama, ...kolomHari, totalPerNilai.A, totalPerNilai.B, totalPerNilai.C, tanpaAbsen]);
-    });
-
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [
-        { wch: 30 },
-        ...Array.from({ length: jumlahHari }, () => ({ wch: 4 })),
-        { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 14 }
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Absen Subuh');
-    XLSX.writeFile(wb, `Rekap_Absen_Subuh_${bulanInput}.xlsx`);
+    const siswa = getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama));
+    const wb = rekapBangunWorkbookHarian({ daftar, siswa, petaPerBulan, kodeList: ['A', 'B', 'C'], tanpaLabel: 'Total Tanpa Absen', namaSheetRingkasan: 'Ringkasan Subuh' });
+    XLSX.writeFile(wb, rekapNamaFileRentang('Rekap_Absen_Subuh', daftar));
 }
 
 // ====================================================================
@@ -1169,9 +1097,9 @@ async function loadPengumumanBoard() {
         const badgeClass = isTugas ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800';
         const borderClass = isTugas ? 'border-amber-100' : 'border-sky-100';
         const deadlineHtml = (isTugas && item.deadline)
-            ? `<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 mt-1"><i data-lucide="clock" class="w-3 h-3"></i> Deadline: ${new Date(item.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>`
+            ? `<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 mt-1"><i data-lucide="clock" class="w-3 h-3"></i> Deadline: ${fmtTgl(item.deadline, { day: 'numeric', month: 'long', year: 'numeric' })}</span>`
             : '';
-        const tanggalDibuat = new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        const tanggalDibuat = fmtTgl(item.created_at, { day: 'numeric', month: 'short', year: 'numeric' });
 
         const div = document.createElement('div');
         div.className = `border ${borderClass} rounded-xl p-3`;
@@ -1308,7 +1236,7 @@ function getSekrTanggalTerpilih() {
     const input = document.getElementById('sekr-tanggal');
     // Default ke hari ini kalau belum pernah dipilih
     if (!input.value) {
-        input.value = new Date().toISOString().split('T')[0];
+        input.value = wibTanggalIso();
     }
     return input.value;
 }
@@ -1392,7 +1320,7 @@ async function toggleAbsensiStatus(siswaId, kode) {
         await loadSekretarisPanel();
 
         // Kalau yang diabsen tanggal hari ini, refresh juga statistik & kalender
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = wibTanggalIso();
         if (tanggalTerpilih === todayStr) {
             await loadBaseDashboardStats();
             renderSiswaAttendanceCalendar();
@@ -1438,63 +1366,38 @@ async function updateAbsensiKeterangan(siswaId, keterangan) {
 // ====================================================================
 async function downloadRekapAbsensi() {
     if (!supabaseClient) return;
+    const rentang = rekapBacaRentang('rekap-bulan', 'rekap-bulan-sampai');
+    if (rentang.galat) { alert(rentang.galat); return; }
+    const { daftar } = rentang;
+    const { awal, akhir } = rekapRentangTanggal(daftar);
 
-    const bulanInput = document.getElementById('rekap-bulan').value; // format: "2026-07"
-    if (!bulanInput) {
-        alert("Silakan pilih bulan rekap terlebih dahulu.");
+    let data;
+    try {
+        data = await rekapAmbilBanyak(() => supabaseClient
+            .from('absensi')
+            .select('siswa_id, tanggal, status')
+            .gte('tanggal', awal).lte('tanggal', akhir)
+            .order('tanggal', { ascending: true }).order('siswa_id', { ascending: true }));
+    } catch (error) {
+        alert("Gagal mengambil data rekap: " + (error.message || error));
         return;
     }
 
-    const [tahun, bulan] = bulanInput.split('-').map(Number);
-    const jumlahHari = new Date(tahun, bulan, 0).getDate();
-    const tanggalAwal = `${bulanInput}-01`;
-    const tanggalAkhir = `${bulanInput}-${String(jumlahHari).padStart(2, '0')}`;
-
-    const { data, error } = await supabaseClient
-        .from('absensi')
-        .select('siswa_id, tanggal, status')
-        .gte('tanggal', tanggalAwal)
-        .lte('tanggal', tanggalAkhir);
-
-    if (error) {
-        alert("Gagal mengambil data rekap: " + error.message);
-        return;
-    }
-
-    // Susun data per siswa per tanggal -> huruf status
-    const rekapMap = {}; // { siswaId: { "1": "H", "2": "S", ... } }
-    (data || []).forEach(item => {
-        const hari = new Date(item.tanggal).getDate();
+    // Susun data per bulan -> siswa -> tanggal -> huruf status
+    const petaPerBulan = {};
+    data.forEach(item => {
+        const bln = String(item.tanggal).slice(0, 7);
+        const hari = Number(String(item.tanggal).slice(8, 10));
         const kode = Object.keys(ABSEN_STATUS_MAP).find(k => ABSEN_STATUS_MAP[k] === item.status) || '-';
-        if (!rekapMap[item.siswa_id]) rekapMap[item.siswa_id] = {};
-        rekapMap[item.siswa_id][hari] = kode;
+        const bulanMap = petaPerBulan[bln] || (petaPerBulan[bln] = {});
+        if (!bulanMap[item.siswa_id]) bulanMap[item.siswa_id] = {};
+        bulanMap[item.siswa_id][hari] = kode;
     });
 
-    // Header CSV: Nama, 1, 2, ..., jumlahHari, Total H, Total I, Total S, Total D, Total A
-    const header = ['Nama Siswa', ...Array.from({ length: jumlahHari }, (_, i) => i + 1), 'Total H', 'Total I', 'Total S', 'Total D', 'Total A'];
-    const rows = [header];
-
-    getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama)).forEach(siswa => {
-        const rekapSiswa = rekapMap[siswa.id] || {};
-        const kolomHari = Array.from({ length: jumlahHari }, (_, i) => rekapSiswa[i + 1] || '-');
-        const totalPerKode = { H: 0, I: 0, S: 0, D: 0, A: 0 };
-        kolomHari.forEach(k => { if (totalPerKode[k] !== undefined) totalPerKode[k]++; });
-
-        rows.push([siswa.nama, ...kolomHari, totalPerKode.H, totalPerKode.I, totalPerKode.S, totalPerKode.D, totalPerKode.A]);
-    });
-
-    // Konversi ke worksheet Excel asli (bukan CSV) supaya tidak tergantung
-    // setting regional (koma vs titik koma) dan rapi saat dibuka di Excel/Sheets
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [
-        { wch: 30 }, // Nama Siswa
-        ...Array.from({ length: jumlahHari }, () => ({ wch: 4 })), // kolom tanggal 1..31
-        { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 9 }, { wch: 9 } // Total H/I/S/D/A
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Absensi');
-    XLSX.writeFile(wb, `Rekap_Absensi_${bulanInput}.xlsx`);
+    const siswa = getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama));
+    // Worksheet Excel asli (bukan CSV) supaya tidak tergantung setting regional
+    const wb = rekapBangunWorkbookHarian({ daftar, siswa, petaPerBulan, kodeList: ['H', 'I', 'S', 'D', 'A'], tanpaLabel: null, namaSheetRingkasan: 'Ringkasan Absensi' });
+    XLSX.writeFile(wb, rekapNamaFileRentang('Rekap_Absensi', daftar));
 }
 
 
@@ -1502,6 +1405,176 @@ async function downloadRekapAbsensi() {
 // 8. ROLE PANEL: BENDAHARA TABUNGAN VILLA
 // ====================================================================
 // Fungsi generik: render total tabungan bersih (setor-tarik) per siswa untuk tabel tabungan manapun
+// ====================================================================
+// REKAP TABUNGAN BULANAN (Bendahara): ringkasan di layar + unduh Excel
+// ====================================================================
+const REKAP_TABUNGAN = {
+    villa:    { tabel: 'tabungan_villa',    judul: 'Tabungan Villa' },
+    tabungan: { tabel: 'tabungan',          judul: 'Tabungan Reguler' },
+    yearbook: { tabel: 'tabungan_yearbook', judul: 'Tabungan Yearbook' },
+    kas:      { tabel: 'tabungan_kas',      judul: 'Tabungan Kas' }
+};
+
+// Bulan berjalan memakai waktu lokal (bukan UTC) supaya tidak meleset di pergantian bulan
+function rekapBulanIni() { return wibBulanIni(); }
+
+// Ambil semua baris sebuah query (dipecah per 1000 baris karena batas bawaan Supabase)
+async function rekapAmbilBanyak(buatQuery) {
+    const semua = [];
+    for (let dari = 0; ; dari += 1000) {
+        const { data, error } = await buatQuery().range(dari, dari + 999);
+        if (error) throw error;
+        semua.push(...(data || []));
+        if (!data || data.length < 1000) break;
+    }
+    return semua;
+}
+
+// Membaca rentang bulan dari dua input ("Dari" wajib, "Sampai" kosong = sama dengan "Dari")
+function rekapBacaRentang(idDari, idSampai) {
+    const dari = document.getElementById(idDari)?.value;
+    const sampai = document.getElementById(idSampai)?.value || dari;
+    if (!dari) return { galat: 'Silakan pilih bulan rekap terlebih dahulu.' };
+    const daftar = waktuDaftarBulan(dari, sampai);
+    if (!daftar) return { galat: 'Rentang bulan tidak valid: "Sampai" harus sama dengan atau sesudah "Dari" (maksimal 24 bulan).' };
+    return { dari, sampai, daftar };
+}
+
+// Hitung rekap rentang bulan (WIB): saldo awal, setor, tarik, saldo akhir per siswa + rincian per bulan
+async function rekapHitungTabungan(prefix, daftarBulan) {
+    const cfg = REKAP_TABUNGAN[prefix];
+    const awal = wibAwalBulanMs(daftarBulan[0]);
+    const akhir = wibAwalBulanBerikutMs(daftarBulan[daftarBulan.length - 1]);
+    const semua = await rekapAmbilBanyak(() => supabaseClient
+        .from(cfg.tabel)
+        .select('siswa_id, nominal, jenis, tanggal, keterangan')
+        .order('tanggal', { ascending: true })
+        .order('siswa_id', { ascending: true }));
+    const nilai = t => t.jenis === 'setor' ? t.nominal : -t.nominal;
+
+    const per = {};
+    const ambil = id => per[id] || (per[id] = { awal: 0, setor: 0, tarik: 0, jumlah: 0, bulan: {} });
+    const transaksiRentang = [];
+    semua.forEach(t => {
+        if (!t.siswa_id) return;
+        const waktu = waktuParse(t.tanggal).getTime();
+        const r = ambil(t.siswa_id);
+        if (waktu < awal) r.awal += nilai(t);
+        else if (waktu < akhir) {
+            const bln = wibTanggalIso(t.tanggal).slice(0, 7);
+            const b = r.bulan[bln] || (r.bulan[bln] = { setor: 0, tarik: 0 });
+            if (t.jenis === 'setor') { r.setor += t.nominal; b.setor += t.nominal; }
+            else { r.tarik += t.nominal; b.tarik += t.nominal; }
+            r.jumlah++;
+            transaksiRentang.push(t);
+        }
+    });
+    let totSetor = 0, totTarik = 0, totAwal = 0;
+    Object.values(per).forEach(r => { totSetor += r.setor; totTarik += r.tarik; totAwal += r.awal; });
+    return { per, transaksiRentang, totSetor, totTarik, totAwal, totAkhir: totAwal + totSetor - totTarik };
+}
+
+async function previewRekapTabungan(prefix) {
+    const input = document.getElementById('rekap-bln-' + prefix);
+    const box = document.getElementById('rekap-ringkas-' + prefix);
+    if (!input || !box || !supabaseClient) return;
+    if (!input.value) input.value = rekapBulanIni();
+    const kunci = input.value + '|' + (document.getElementById('rekap-bln-sampai-' + prefix)?.value || '');
+    const rentang = rekapBacaRentang('rekap-bln-' + prefix, 'rekap-bln-sampai-' + prefix);
+    if (rentang.galat) { box.innerHTML = `<p class="col-span-3 text-xs text-rose-600 py-1">${escapeHtml(rentang.galat)}</p>`; return; }
+    box.innerHTML = '<p class="col-span-3 text-xs text-slate-500 py-1">Menghitung rekap...</p>';
+    try {
+        const r = await rekapHitungTabungan(prefix, rentang.daftar);
+        const kunciSekarang = document.getElementById('rekap-bln-' + prefix).value + '|' + (document.getElementById('rekap-bln-sampai-' + prefix)?.value || '');
+        if (kunciSekarang !== kunci) return;   // pengguna sudah ganti rentang; abaikan hasil lama
+        const kotak = (label, angka, warna) => `<div class="bg-white rounded-lg border border-slate-200 py-2 px-1">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">${label}</p>
+            <p class="text-xs sm:text-sm font-bold ${warna}">${formatRupiah(angka)}</p></div>`;
+        box.innerHTML = kotak('Setor', r.totSetor, 'text-emerald-700')
+            + kotak('Tarik', r.totTarik, 'text-amber-700')
+            + kotak('Saldo akhir', r.totAkhir, 'text-slate-900');
+    } catch (err) {
+        console.error('Gagal menghitung rekap tabungan:', err);
+        box.innerHTML = '<p class="col-span-3 text-xs text-rose-600 py-1">Rekap belum bisa dihitung. Periksa koneksi lalu coba lagi.</p>';
+    }
+}
+
+async function downloadRekapTabungan(prefix) {
+    if (!supabaseClient) return;
+    const cfg = REKAP_TABUNGAN[prefix];
+    const rentang = rekapBacaRentang('rekap-bln-' + prefix, 'rekap-bln-sampai-' + prefix);
+    if (rentang.galat) { alert(rentang.galat); return; }
+    const { daftar } = rentang;
+
+    let r;
+    try { r = await rekapHitungTabungan(prefix, daftar); }
+    catch (err) { alert('Gagal mengambil data rekap: ' + (err.message || err)); return; }
+
+    const judulRentang = daftar.length > 1
+        ? `${waktuLabelBulan(daftar[0])} - ${waktuLabelBulan(daftar[daftar.length - 1])}`
+        : waktuLabelBulan(daftar[0]);
+    const siswa = getSiswaOnly().slice().sort((a, b) => a.nama.localeCompare(b.nama));
+    const namaById = Object.fromEntries(siswa.map(x => [x.id, x.nama]));
+    const kosong = { awal: 0, setor: 0, tarik: 0, jumlah: 0, bulan: {} };
+
+    // Sheet 1: rekap seluruh rentang per siswa
+    const rekap = [
+        [`Rekap ${cfg.judul} - ${judulRentang}`], [],
+        ['No', 'Nama Siswa', 'Saldo Awal', 'Total Setor', 'Total Tarik', 'Saldo Akhir', 'Jumlah Transaksi']
+    ];
+    siswa.forEach((x, i) => {
+        const v = r.per[x.id] || kosong;
+        rekap.push([i + 1, x.nama, v.awal, v.setor, v.tarik, v.awal + v.setor - v.tarik, v.jumlah]);
+    });
+    rekap.push(['', 'TOTAL', r.totAwal, r.totSetor, r.totTarik, r.totAkhir, r.transaksiRentang.length]);
+    const ws1 = XLSX.utils.aoa_to_sheet(rekap);
+    ws1['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 18 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws1, 'Rekap per Siswa');
+
+    // Sheet 2 (hanya jika lebih dari satu bulan): setor & tarik tiap bulan
+    if (daftar.length > 1) {
+        const kepala = ['No', 'Nama Siswa'];
+        daftar.forEach(b => { kepala.push(`${waktuLabelBulan(b)} Setor`, `${waktuLabelBulan(b)} Tarik`); });
+        const perBulan = [kepala];
+        const total = daftar.flatMap(() => [0, 0]);
+        siswa.forEach((x, i) => {
+            const v = r.per[x.id] || kosong;
+            const baris = [i + 1, x.nama];
+            daftar.forEach((b, k) => {
+                const m = v.bulan[b] || { setor: 0, tarik: 0 };
+                baris.push(m.setor, m.tarik);
+                total[k * 2] += m.setor; total[k * 2 + 1] += m.tarik;
+            });
+            perBulan.push(baris);
+        });
+        perBulan.push(['', 'TOTAL', ...total]);
+        const ws2 = XLSX.utils.aoa_to_sheet(perBulan);
+        ws2['!cols'] = [{ wch: 5 }, { wch: 30 }, ...daftar.flatMap(() => [{ wch: 18 }, { wch: 18 }])];
+        XLSX.utils.book_append_sheet(wb, ws2, 'Per Bulan');
+    }
+
+    // Sheet terakhir: seluruh transaksi di rentang itu (tanggal & jam WIB)
+    const detail = [['Tanggal', 'Jam (WIB)', 'Nama Siswa', 'Jenis', 'Nominal', 'Keterangan']];
+    r.transaksiRentang.forEach(t => {
+        detail.push([
+            fmtTgl(t.tanggal, { day: 'numeric', month: 'short', year: 'numeric' }),
+            fmtJam(t.tanggal),
+            namaById[t.siswa_id] || 'Unknown',
+            t.jenis === 'setor' ? 'Setor' : 'Tarik',
+            t.nominal,
+            t.keterangan || ''
+        ]);
+    });
+    const ws3 = XLSX.utils.aoa_to_sheet(detail);
+    ws3['!cols'] = [{ wch: 14 }, { wch: 10 }, { wch: 30 }, { wch: 8 }, { wch: 14 }, { wch: 30 }];
+    XLSX.utils.book_append_sheet(wb, ws3, 'Transaksi');
+
+    const sufiks = daftar.length > 1 ? `${daftar[0]}_sd_${daftar[daftar.length - 1]}` : daftar[0];
+    XLSX.writeFile(wb, `Rekap_${cfg.judul.replace(/\s+/g, '_')}_${sufiks}.xlsx`);
+}
+
 async function loadTotalTabunganPerSiswa(tableName, containerId) {
     if (!supabaseClient) return;
 
@@ -1565,6 +1638,7 @@ async function loadTotalKeseluruhanTabungan(tableName, elementId) {
 
 async function loadBendaharaVillaPanel() {
     if (!supabaseClient) return;
+    if (document.getElementById('rekap-bln-villa')?.value) previewRekapTabungan('villa');   // segarkan ringkasan rekap
 
     await loadTotalKeseluruhanTabungan('tabungan_villa', 'villa-grand-total');
     await loadTotalTabunganPerSiswa('tabungan_villa', 'villa-total-siswa-list');
@@ -1587,7 +1661,7 @@ async function loadBendaharaVillaPanel() {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition";
 
-        const formattedDate = new Date(item.tanggal).toLocaleString('id-ID', {
+        const formattedDate = fmtWaktu(item.tanggal, {
             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
         });
 
@@ -1657,6 +1731,7 @@ async function submitVilla(e) {
 // ====================================================================
 async function loadBendaharaTabunganPanel() {
     if (!supabaseClient) return;
+    if (document.getElementById('rekap-bln-tabungan')?.value) previewRekapTabungan('tabungan');   // segarkan ringkasan rekap
 
     await loadTotalTabunganPerSiswa('tabungan', 'tab-total-siswa-list');
 
@@ -1678,7 +1753,7 @@ async function loadBendaharaTabunganPanel() {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition";
 
-        const formattedDate = new Date(item.tanggal).toLocaleString('id-ID', {
+        const formattedDate = fmtWaktu(item.tanggal, {
             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
         });
 
@@ -1747,6 +1822,7 @@ async function submitTabungan(e) {
 // ====================================================================
 async function loadBendaharaYearbookPanel() {
     if (!supabaseClient) return;
+    if (document.getElementById('rekap-bln-yearbook')?.value) previewRekapTabungan('yearbook');   // segarkan ringkasan rekap
 
     await loadTotalKeseluruhanTabungan('tabungan_yearbook', 'yearbook-grand-total');
     await loadTotalTabunganPerSiswa('tabungan_yearbook', 'yearbook-total-siswa-list');
@@ -1769,7 +1845,7 @@ async function loadBendaharaYearbookPanel() {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition";
 
-        const formattedDate = new Date(item.tanggal).toLocaleString('id-ID', {
+        const formattedDate = fmtWaktu(item.tanggal, {
             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
         });
 
@@ -1838,6 +1914,7 @@ async function submitYearbook(e) {
 // ====================================================================
 async function loadBendaharaKasPanel() {
     if (!supabaseClient) return;
+    if (document.getElementById('rekap-bln-kas')?.value) previewRekapTabungan('kas');   // segarkan ringkasan rekap
 
     await loadTotalKeseluruhanTabungan('tabungan_kas', 'kas-grand-total');
     await loadTotalTabunganPerSiswa('tabungan_kas', 'kas-total-siswa-list');
@@ -1860,7 +1937,7 @@ async function loadBendaharaKasPanel() {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition";
 
-        const formattedDate = new Date(item.tanggal).toLocaleString('id-ID', {
+        const formattedDate = fmtWaktu(item.tanggal, {
             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
         });
 
