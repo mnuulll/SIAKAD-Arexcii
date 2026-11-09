@@ -14,7 +14,7 @@ const NAV_TAB = ['home', 'fitur', 'utbk', 'minigames', 'peringkat', 'profil'];
 const NAV_HALAMAN = {
     home: 'home', homeumum: 'home', fitur: 'fitur', info: 'home', log: 'home', role: 'home',
     utbk: 'utbk',
-    minigames: 'minigames', matdas: 'minigames', inggris: 'minigames',
+    minigames: 'minigames', matdas: 'minigames', inggris: 'minigames', sinonim: 'minigames',
     peringkat: 'peringkat',
     profil: 'profil'
 };

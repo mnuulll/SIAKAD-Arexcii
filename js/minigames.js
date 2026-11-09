@@ -1,7 +1,7 @@
 // ====================================================================
 // MINI GAMES: hub, level, dan fungsi bersama untuk semua game
 //   (Peringkat Mini Games & UTBK ada di halaman sendiri: js/peringkat.js)
-//   Game saat ini: Matematika (js/matdas.js), Bahasa Inggris (js/inggris.js).
+//   Game saat ini: Matematika (js/matdas.js), Bahasa Inggris (js/inggris.js), Sinonim & Antonim (js/sinonim.js).
 //   Menambah game baru: daftarkan di MG_GAMES, simpan hasil lewat mgSimpanSesi(),
 //   dan tambahkan nama game ke constraint tabel minigame_sesi di database.
 //
@@ -13,7 +13,8 @@
 
 const MG_GAMES = {
     matematika: { nama: 'Matematika',      ikon: 'calculator', deskripsi: 'Hitung cepat: penjumlahan sampai pecahan dan desimal.', buka: 'openMatdasPage()' },
-    inggris:    { nama: 'Bahasa Inggris',  ikon: 'languages',  deskripsi: 'Terjemahkan kata dari dan ke bahasa Inggris.',          buka: 'openInggrisPage()' }
+    inggris:    { nama: 'Bahasa Inggris',  ikon: 'languages',  deskripsi: 'Terjemahkan kata dari dan ke bahasa Inggris.',          buka: 'openInggrisPage()' },
+    sinonim:    { nama: 'Sinonim & Antonim', ikon: 'arrow-left-right', deskripsi: 'Pilih persamaan atau lawan kata yang tepat.',   buka: 'openSinonimPage()' }
 };
 const MG_MENIT = [1, 2, 3, 4, 5];
 const MG_JUMLAH = [10, 20, 30, 50, 100];
@@ -30,14 +31,14 @@ const MG_LEVEL = [
 const mg = {
     view: 'hub',
     ringkas: null,                     // { minggu: baris | null, semua: baris | null }
-    riwayat: { matematika: [], inggris: [] },
-    riwayatMuat: { matematika: false, inggris: false }
+    riwayat: { matematika: [], inggris: [], sinonim: [] },
+    riwayatMuat: { matematika: false, inggris: false, sinonim: false }
 };
 
 function resetMiniGamesState() {
     Object.assign(mg, {
         view: 'hub', ringkas: null,
-        riwayat: { matematika: [], inggris: [] }, riwayatMuat: { matematika: false, inggris: false }
+        riwayat: { matematika: [], inggris: [], sinonim: [] }, riwayatMuat: { matematika: false, inggris: false, sinonim: false }
     });
     const root = document.getElementById('minigames-root');
     if (root) root.innerHTML = '';
@@ -77,7 +78,8 @@ function mgLevel(poin) {
 }
 function mgNamaTopik(game, kunci) {
     const peta = game === 'matematika' ? (typeof MD_TOPIK !== 'undefined' ? MD_TOPIK : {})
-        : game === 'inggris' ? (typeof ING_TOPIK !== 'undefined' ? ING_TOPIK : {}) : {};
+        : game === 'inggris' ? (typeof ING_TOPIK !== 'undefined' ? ING_TOPIK : {})
+        : game === 'sinonim' ? (typeof SNM_TOPIK !== 'undefined' ? SNM_TOPIK : {}) : {};
     return peta[kunci] ? peta[kunci].nama : null;
 }
 

@@ -166,6 +166,7 @@ async function handleLogout() {
     if (typeof resetUtbkState === 'function') resetUtbkState();
     if (typeof resetMatdasState === 'function') resetMatdasState();
     if (typeof resetInggrisState === 'function') resetInggrisState();
+    if (typeof resetSinonimState === 'function') resetSinonimState();
     if (typeof resetMiniGamesState === 'function') resetMiniGamesState();
     if (typeof resetPeringkatState === 'function') resetPeringkatState();
     if (typeof profilReset === 'function') profilReset();
