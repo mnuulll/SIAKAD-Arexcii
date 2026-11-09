@@ -325,6 +325,10 @@ function profilRender() {
                 <span class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0"><i data-lucide="log-out" class="w-5 h-5"></i></span>
                 <span class="flex-1"><span class="block text-sm font-semibold text-rose-600">Keluar</span></span>
             </button>
+            ${umum ? `<button type="button" onclick="openHapusAkunModal()" class="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-rose-50 transition">
+                <span class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0"><i data-lucide="trash-2" class="w-5 h-5"></i></span>
+                <span class="flex-1"><span class="block text-sm font-semibold text-rose-600">Hapus Akun</span><span class="block text-xs text-slate-400">Hapus akun dan semua datanya secara permanen</span></span>
+            </button>` : ''}
         </div>
         <p class="text-center text-xs text-slate-400">Versi aplikasi ${escapeHtml(APP_VERSI)}</p>
     </div>`;

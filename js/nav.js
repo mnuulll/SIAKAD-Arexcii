@@ -1,19 +1,21 @@
 // ====================================================================
-// BOTTOM NAVIGATION: Home, [fitur role], UTBK, Mini Games, Profil
+// BOTTOM NAVIGATION: Home, [fitur role], UTBK, Mini Games, Peringkat, Profil
 //   - "Fitur role" hanya muncul untuk Sekretaris (Absensi) dan Bendahara
 //     (Villa / Tabungan / Yearbook / Kas); label & ikon mengikuti role.
 //   - UTBK hanya tampil untuk akun kelas UTBK (termasuk semua akun Umum).
-//   - Mini Games disembunyikan untuk Wali Kelas.
+//   - Mini Games dan Peringkat disembunyikan untuk Wali Kelas.
+//   - Peringkat (js/peringkat.js): tab Mini Games, plus tab UTBK untuk akun yang punya UTBK Corner.
 //   - Akun Umum: Home (ringkasan UTBK), UTBK, Mini Games, Profil. Tidak ada fitur role.
 //   - Tombol yang aktif ditandai lingkaran yang terangkat (lihat css/style.css).
 //   - Bar disembunyikan otomatis saat game sedang berjalan.
 // ====================================================================
-const NAV_TAB = ['home', 'fitur', 'utbk', 'minigames', 'profil'];
+const NAV_TAB = ['home', 'fitur', 'utbk', 'minigames', 'peringkat', 'profil'];
 // Halaman -> tab yang disorot
 const NAV_HALAMAN = {
     home: 'home', homeumum: 'home', fitur: 'fitur', info: 'home', log: 'home', role: 'home',
     utbk: 'utbk',
     minigames: 'minigames', matdas: 'minigames', inggris: 'minigames',
+    peringkat: 'peringkat',
     profil: 'profil'
 };
 
@@ -28,10 +30,12 @@ function setupBottomNav() {
     const tombolFitur = document.getElementById('nav-fitur');
     const utbk = document.getElementById('nav-utbk');
     const games = document.getElementById('nav-minigames');
+    const peringkat = document.getElementById('nav-peringkat');
 
     if (home) home.hidden = false;
     if (utbk) utbk.hidden = !adaUtbk;
     if (games) games.hidden = !adaGames;
+    if (peringkat) peringkat.hidden = !adaGames;   // sama seperti Mini Games: tidak untuk Wali Kelas
 
     if (tombolFitur) {
         tombolFitur.hidden = !fitur;
@@ -84,5 +88,6 @@ function navKe(tab) {
     else if (tab === 'fitur') openFiturRole();
     else if (tab === 'utbk') openUtbkPage();
     else if (tab === 'minigames') openMiniGames();
+    else if (tab === 'peringkat') openPeringkatPage();
     else if (tab === 'profil') openProfilPage();
 }

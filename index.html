@@ -629,6 +629,16 @@
                 </section>
             </div>
 
+            <!-- ===== HALAMAN: PERINGKAT (Mini Games & UTBK) ===== -->
+            <div id="page-peringkat" class="hidden flex flex-col gap-4">
+                <section class="w-full">
+                    <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2 mb-4">
+                        <i data-lucide="trophy" class="w-5 h-5 text-primary-600"></i> Peringkat
+                    </h3>
+                    <div id="peringkat-root"></div>
+                </section>
+            </div>
+
             <!-- ===== HALAMAN: GAME BAHASA INGGRIS ===== -->
             <div id="page-inggris" class="hidden flex flex-col gap-4">
                 <button type="button" onclick="mgKeHub()" class="self-start flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-primary-700 transition">
@@ -1181,6 +1191,9 @@
             <button type="button" id="nav-minigames" class="bnav-item" onclick="navKe('minigames')" aria-current="false" hidden>
                 <span class="bnav-ikon"><i data-lucide="gamepad-2"></i></span><span class="bnav-label">Mini Games</span>
             </button>
+            <button type="button" id="nav-peringkat" class="bnav-item" onclick="navKe('peringkat')" aria-current="false" hidden>
+                <span class="bnav-ikon"><i data-lucide="trophy"></i></span><span class="bnav-label">Peringkat</span>
+            </button>
             <button type="button" id="nav-profil" class="bnav-item" onclick="navKe('profil')" aria-current="false">
                 <span class="bnav-ikon"><i data-lucide="user-round"></i></span><span class="bnav-label">Profil</span>
             </button>
@@ -1234,6 +1247,36 @@
         </div>
     </div>
 
+    <!-- ==================== MODAL HAPUS AKUN (akun Umum) ==================== -->
+    <div id="hapus-akun-modal" class="hidden fixed inset-0 z-[100] bg-slate-900/60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-rose-600 flex items-center gap-2">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i> Hapus Akun
+                </h3>
+                <button type="button" onclick="closeHapusAkunModal()" class="text-slate-400 hover:text-slate-600" aria-label="Tutup">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <p class="text-sm text-slate-600 leading-relaxed">Akun beserta seluruh datanya akan dihapus permanen: data try out, target, profil, serta poin dan riwayat Mini Games. <b>Ini tidak bisa dibatalkan.</b></p>
+                <div>
+                    <label for="hapus-akun-sandi" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Masukkan kata sandi untuk konfirmasi</label>
+                    <input type="password" id="hapus-akun-sandi" maxlength="72" autocomplete="current-password" class="w-full bg-slate-50 border border-slate-200 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500">
+                </div>
+                <label class="flex items-start gap-2 text-sm text-slate-600 cursor-pointer">
+                    <input type="checkbox" id="hapus-akun-cek" class="mt-0.5 w-4 h-4 accent-rose-600">
+                    <span>Saya mengerti data akun ini tidak bisa dikembalikan.</span>
+                </label>
+                <p id="hapus-akun-error" class="hidden text-xs font-semibold text-red-500" role="alert"></p>
+            </div>
+            <div class="flex gap-2 mt-5">
+                <button type="button" onclick="closeHapusAkunModal()" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition">Batal</button>
+                <button type="button" id="hapus-akun-btn" onclick="submitHapusAkun()" class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white font-semibold text-sm transition">Hapus Akun</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== JAVASCRIPT ==================== -->
     <script src="js/config.js"></script>
     <script src="js/waktu.js"></script>
@@ -1241,6 +1284,7 @@
     <script src="js/utbk-data.js"></script>
     <script src="js/utbk.js"></script>
     <script src="js/minigames.js"></script>
+    <script src="js/peringkat.js"></script>
     <script src="js/inggris-data.js"></script>
     <script src="js/matdas.js"></script>
     <script src="js/inggris.js"></script>

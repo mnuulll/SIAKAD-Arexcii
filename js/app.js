@@ -32,7 +32,7 @@ function showDashPage(name, fromPop = false) {
     tutupSemuaFitur();                                          // halaman fitur sekretaris/bendahara ditutup
     if (typeof navSinkron === 'function') navSinkron(name);   // sorot tab navigasi bawah yang sesuai (js/nav.js)
     const cfgFitur = (!umum && activeUser) ? FEATURE_ROLE_CONFIG[activeUser.role] : null;
-    const pages = { fitur: cfgFitur ? cfgFitur.panelId : '__none__', home: 'dash-home', homeumum: 'page-home-umum', info: 'page-tabungan-info', log: 'page-tabungan-log', role: 'page-role', utbk: 'page-utbk', matdas: 'page-matdas', inggris: 'page-inggris', minigames: 'page-minigames', profil: 'page-profil' };
+    const pages = { fitur: cfgFitur ? cfgFitur.panelId : '__none__', home: 'dash-home', homeumum: 'page-home-umum', info: 'page-tabungan-info', log: 'page-tabungan-log', role: 'page-role', utbk: 'page-utbk', matdas: 'page-matdas', inggris: 'page-inggris', minigames: 'page-minigames', peringkat: 'page-peringkat', profil: 'page-profil' };
     Object.entries(pages).forEach(([key, id]) => {
         const el = document.getElementById(id);
         if (el) el.classList.toggle('hidden', key !== name);

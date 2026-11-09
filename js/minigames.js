@@ -1,5 +1,6 @@
 // ====================================================================
-// MINI GAMES: hub, peringkat, level, dan fungsi bersama untuk semua game
+// MINI GAMES: hub, level, dan fungsi bersama untuk semua game
+//   (Peringkat Mini Games & UTBK ada di halaman sendiri: js/peringkat.js)
 //   Game saat ini: Matematika (js/matdas.js), Bahasa Inggris (js/inggris.js).
 //   Menambah game baru: daftarkan di MG_GAMES, simpan hasil lewat mgSimpanSesi(),
 //   dan tambahkan nama game ke constraint tabel minigame_sesi di database.
@@ -27,9 +28,7 @@ const MG_LEVEL = [
 ];
 
 const mg = {
-    view: 'hub',                       // hub | peringkat
-    pPeriode: 'minggu', pGame: null,   // filter peringkat
-    pData: null, pMuat: false, pGalat: false,
+    view: 'hub',
     ringkas: null,                     // { minggu: baris | null, semua: baris | null }
     riwayat: { matematika: [], inggris: [] },
     riwayatMuat: { matematika: false, inggris: false }
@@ -37,7 +36,7 @@ const mg = {
 
 function resetMiniGamesState() {
     Object.assign(mg, {
-        view: 'hub', pPeriode: 'minggu', pGame: null, pData: null, pMuat: false, pGalat: false, ringkas: null,
+        view: 'hub', ringkas: null,
         riwayat: { matematika: [], inggris: [] }, riwayatMuat: { matematika: false, inggris: false }
     });
     const root = document.getElementById('minigames-root');
@@ -198,7 +197,7 @@ async function mgMuatRingkas() {
 function mgRender() {
     const root = document.getElementById('minigames-root');
     if (!root) return;
-    root.innerHTML = mg.view === 'peringkat' ? mgViewPeringkat() : mgViewHub();
+    root.innerHTML = mgViewHub();
     lucide.createIcons();
 }
 
@@ -227,93 +226,10 @@ function mgViewHub() {
         <div class="rounded-2xl bg-gradient-to-br from-primary-700 to-primary-900 text-white p-5">${kartuSaya}</div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             ${kartuGame}
-            <button type="button" onclick="mgBukaPeringkat()" class="group text-left rounded-2xl border border-slate-200 bg-white hover:border-amber-300 hover:shadow-md active:scale-[0.99] transition p-4 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0"><i data-lucide="trophy" class="w-6 h-6"></i></div>
-                <div class="flex-1 min-w-0"><p class="font-bold text-slate-800">Peringkat</p><p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Lihat siapa yang paling banyak mengumpulkan poin.</p></div>
-                <i data-lucide="chevron-right" class="w-5 h-5 text-slate-300 group-hover:text-amber-500 shrink-0"></i>
-            </button>
             <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-4 flex items-center gap-4">
                 <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0"><i data-lucide="puzzle" class="w-6 h-6"></i></div>
                 <div class="flex-1 min-w-0"><p class="font-bold text-slate-500">Segera hadir</p><p class="text-xs text-slate-400 mt-0.5">Game lainnya menyusul.</p></div>
             </div>
         </div>
-    </div>`;
-}
-
-// ====================================================================
-// PERINGKAT
-// ====================================================================
-async function mgBukaPeringkat() {
-    mg.view = 'peringkat';
-    mgRender();
-    await mgMuatPeringkat();
-}
-async function mgMuatPeringkat() {
-    mg.pMuat = true; mg.pGalat = false; mg.pData = null;
-    mgRender();
-    try {
-        mg.pData = await mgPanggilPeringkat(mg.pGame, mg.pPeriode);
-    } catch (err) {
-        console.error('Gagal memuat peringkat:', err);
-        mg.pGalat = true;
-    }
-    mg.pMuat = false;
-    if (mg.view === 'peringkat') mgRender();
-}
-function mgSetPeriode(p) { mg.pPeriode = p; mgMuatPeringkat(); }
-function mgSetGamePeringkat(g) { mg.pGame = g || null; mgMuatPeringkat(); }
-function mgKembaliHub() { mg.view = 'hub'; mgRender(); window.scrollTo({ top: 0 }); }
-
-function mgViewPeringkat() {
-    const periode = [['minggu', 'Minggu ini'], ['semua', 'Semua waktu']].map(([k, l]) => mgChip(mg.pPeriode === k, `mgSetPeriode('${k}')`, l)).join('');
-    const game = [[null, 'Semua game'], ...Object.entries(MG_GAMES).map(([k, g]) => [k, g.nama])]
-        .map(([k, l]) => mgChip(mg.pGame === k, `mgSetGamePeringkat(${k === null ? 'null' : `'${k}'`})`, l)).join('');
-
-    let isi;
-    if (mg.pGalat) {
-        isi = `<div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-            <p class="font-semibold">Peringkat belum bisa dimuat. Periksa koneksi internet.</p>
-            <button type="button" onclick="mgMuatPeringkat()" class="mt-3 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">Coba lagi</button></div>`;
-    } else if (mg.pMuat || !mg.pData) {
-        isi = `<p class="text-sm text-slate-400 py-8 text-center">Memuat peringkat...</p>`;
-    } else if (!mg.pData.length) {
-        isi = `<div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-8 text-center">
-            <p class="font-semibold text-slate-700">Belum ada yang bermain</p>
-            <p class="text-sm text-slate-400 mt-1">${mg.pPeriode === 'minggu' ? 'Peringkat minggu ini masih kosong. Jadilah yang pertama.' : 'Belum ada sesi yang tercatat.'}</p></div>`;
-    } else {
-        let sebelumnya = 0;
-        const baris = mg.pData.map(r => {
-            const lompat = r.rk > 20 && sebelumnya <= 20;
-            sebelumnya = r.rk;
-            const lv = mgLevel(Number(r.poin_seumur));
-            const warnaRank = r.rk === 1 ? 'bg-amber-100 text-amber-700' : r.rk === 2 ? 'bg-slate-200 text-slate-700' : r.rk === 3 ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-500';
-            return `${lompat ? `<div class="text-center text-slate-300 text-xs py-1" aria-hidden="true">. . .</div>` : ''}
-            <div class="flex items-center gap-3 rounded-xl px-3 py-2.5 ${r.adalah_saya ? 'bg-primary-50 border border-primary-200' : 'border border-transparent'}">
-                <span class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-sm font-bold tabular-nums ${warnaRank}">${r.rk}</span>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-slate-800 truncate">${escapeHtml(r.nama_siswa)}${r.adalah_saya ? ' <span class="text-primary-700 font-medium">(kamu)</span>' : ''}</p>
-                    <p class="text-xs text-slate-400">${escapeHtml(lv.nama)}, ${Number(r.jumlah_sesi)} sesi, akurasi ${Number(r.akurasi_persen)}%</p>
-                </div>
-                <p class="text-base font-bold text-primary-700 tabular-nums shrink-0">${mgFmtAngka(r.total_poin)}</p>
-            </div>`;
-        }).join('');
-        isi = `<div class="flex flex-col gap-1">${baris}</div>`;
-    }
-
-    return `<div class="flex flex-col gap-4">
-        <button type="button" onclick="mgKembaliHub()" class="self-start flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-primary-700"><i data-lucide="arrow-left" class="w-4 h-4"></i> Mini Games</button>
-        <div><h4 class="font-bold text-lg text-slate-800">Peringkat</h4>
-            <p class="text-xs text-slate-400 mt-0.5">${mg.pPeriode === 'minggu' ? 'Berganti setiap Senin pukul 00.00 WIB.' : 'Total poin dari semua sesi.'}</p></div>
-        <div class="flex flex-wrap gap-2">${periode}</div>
-        <div class="flex flex-wrap gap-2">${game}</div>
-        ${isi}
-        <details class="rounded-2xl border border-slate-100 bg-white">
-            <summary class="cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-3 p-4 font-bold text-slate-800 text-sm">Cara poin dihitung<i data-lucide="chevron-down" class="w-5 h-5 text-slate-400"></i></summary>
-            <div class="px-4 pb-4 text-sm text-slate-600 leading-relaxed space-y-2">
-                <p>Setiap jawaban benar menambah poin sesuai tingkat kesulitan soalnya: <b>10</b> poin untuk soal mudah, <b>20</b> untuk sedang, dan <b>30</b> untuk sulit. Jawaban salah mengurangi sedikit: 2, 4, dan 6 poin. Poin satu sesi tidak pernah di bawah 0.</p>
-                <p>Peringkat menjumlahkan poin semua sesi pada periode yang dipilih, jadi yang rajin berlatih dan akurat akan naik. Poin dihitung oleh database, bukan oleh aplikasi di HP.</p>
-                <p>Level ditentukan dari total poin sepanjang waktu: Pemula, Perunggu (300), Perak (1.000), Emas (2.500), Platinum (5.000), dan Berlian (10.000).</p>
-            </div>
-        </details>
     </div>`;
 }

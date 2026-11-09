@@ -167,6 +167,7 @@ async function handleLogout() {
     if (typeof resetMatdasState === 'function') resetMatdasState();
     if (typeof resetInggrisState === 'function') resetInggrisState();
     if (typeof resetMiniGamesState === 'function') resetMiniGamesState();
+    if (typeof resetPeringkatState === 'function') resetPeringkatState();
     if (typeof profilReset === 'function') profilReset();
     if (typeof navSembunyikan === 'function') navSembunyikan();
 
@@ -440,6 +441,64 @@ async function submitChangePin() {
     } catch (err) {
         console.error('Gagal ganti PIN/sandi:', err);
         showPinModalError(umum ? 'Gagal mengganti kata sandi. Periksa koneksi internet kamu.' : 'Gagal mengganti PIN. Periksa koneksi internet kamu.');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// ====================================================================
+// HAPUS AKUN (khusus akun Umum; fungsi database hapus_akun_umum, kata sandi diverifikasi di server)
+// ====================================================================
+function showHapusAkunError(msg) {
+    const el = document.getElementById('hapus-akun-error');
+    el.innerText = msg || '';
+    el.classList.toggle('hidden', !msg);
+}
+
+function openHapusAkunModal() {
+    if (!isAkunUmum()) return;
+    document.getElementById('hapus-akun-sandi').value = '';
+    document.getElementById('hapus-akun-cek').checked = false;
+    showHapusAkunError('');
+    document.getElementById('hapus-akun-modal').classList.remove('hidden');
+    lucide.createIcons();
+    document.getElementById('hapus-akun-sandi').focus();
+}
+
+function closeHapusAkunModal() {
+    document.getElementById('hapus-akun-modal').classList.add('hidden');
+    document.getElementById('hapus-akun-sandi').value = '';
+}
+
+async function submitHapusAkun() {
+    if (!isAkunUmum()) return;
+    const sandi = document.getElementById('hapus-akun-sandi').value;
+    if (!sandi) return showHapusAkunError('Masukkan kata sandi kamu.');
+    if (!document.getElementById('hapus-akun-cek').checked) return showHapusAkunError('Centang kotak persetujuan terlebih dahulu.');
+
+    const btn = document.getElementById('hapus-akun-btn');
+    btn.disabled = true;
+    showHapusAkunError('');
+    try {
+        const { data, error } = await supabaseClient.rpc('hapus_akun_umum', { p_sandi: sandi });
+        if (error) throw error;
+        if (!data || !data.ok) {
+            const pesan = {
+                tidak_login: 'Sesi kamu sudah habis. Silakan login ulang.',
+                bukan_akun_umum: 'Hanya akun Umum yang bisa dihapus dari sini.',
+                sandi_salah: 'Kata sandi yang kamu masukkan salah.',
+                terlalu_banyak_percobaan: 'Terlalu banyak percobaan salah. Coba lagi dalam 10 menit.'
+            };
+            return showHapusAkunError(pesan[data && data.error] || 'Gagal menghapus akun. Coba lagi.');
+        }
+
+        closeHapusAkunModal();
+        await handleLogout();   // sesi sudah terhapus di server; ini membersihkan token & tampilan
+        setLoginTab('umum');
+        tampilPesanUmum('masuk', 'Akun kamu sudah dihapus permanen.', 'sukses');
+    } catch (err) {
+        console.error('Gagal menghapus akun:', err);
+        showHapusAkunError('Gagal menghapus akun. Periksa koneksi internet kamu lalu coba lagi.');
     } finally {
         btn.disabled = false;
     }

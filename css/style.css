@@ -23,7 +23,7 @@
     left: 50%;
     bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%);
-    width: min(calc(100% - 1.5rem), 26rem);
+    width: min(calc(100% - 1rem), 28rem);
     z-index: 55;               /* di atas halaman fitur (50) supaya navigasi tetap bisa dipakai */
     display: none;
     pointer-events: none;      /* hanya bar-nya yang bisa disentuh */
@@ -73,7 +73,7 @@ body.nav-aktif { padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)
     transition: transform 320ms cubic-bezier(.34, 1.56, .64, 1), background-color 200ms ease, box-shadow 260ms ease;
 }
 .bnav-ikon svg { width: 1.45rem; height: 1.45rem; }
-.bnav-label { font-size: 0.68rem; font-weight: 600; line-height: 1; padding-bottom: 0.1rem; transition: transform 320ms cubic-bezier(.34, 1.56, .64, 1), color 200ms ease; }
+.bnav-label { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.68rem; font-weight: 600; line-height: 1; padding-bottom: 0.1rem; transition: transform 320ms cubic-bezier(.34, 1.56, .64, 1), color 200ms ease; }
 .bnav-item:not(.aktif):hover { color: #64748b; }
 .bnav-item:active .bnav-ikon { transform: scale(0.86); }
 
