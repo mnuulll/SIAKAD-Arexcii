@@ -1,3 +1,0 @@
--- Sudah dijalankan di Supabase (migrasi: akun_umum_edit_nama_username).
--- Disimpan di sini sebagai catatan. Fungsi: akun_saya() dan ubah_akun_umum(p_nama, p_username).
--- Isi lengkap: lihat Supabase > Database > Functions.
