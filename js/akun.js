@@ -71,6 +71,7 @@ async function akunSimpan(e) {
             akunState.draft = null;
             // Perbarui tampilan header
             const n = document.getElementById('user-display-name'); if (n) n.innerText = nama;
+            const bn = document.getElementById('umum-banner-nama'); if (bn) bn.textContent = nama;
             const a = document.getElementById('user-avatar-text'); if (a) a.innerText = nama.substring(0, 2).toUpperCase();
             if (typeof utbkToast === 'function') utbkToast('Akun disimpan');
         }

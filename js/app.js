@@ -224,6 +224,13 @@ const FEATURE_ROLE_CONFIG = {
     'bendahara_tabungan_kas': { label: 'Kas', prefix: 'kas', panelId: 'panel-bendahara-kas', icon: 'wallet', color: '#10b981', loadFn: () => loadBendaharaKasPanel() },
 };
 
+// Akun Umum: kotak header diganti banner UTBK
+function umumBannerIsi() {
+    const n = document.getElementById('umum-banner-nama'); if (n) n.textContent = activeUser.nama;
+    const a = document.getElementById('umum-banner-angka');
+    if (a) { const h = typeof utbkHariMenujuUjian === 'function' ? utbkHariMenujuUjian() : 0; a.textContent = h > 0 ? h : '-'; }
+}
+
 async function showDashboard() {
     // Sembunyikan form login, tampilkan dashboard
     document.getElementById('login-card').classList.add('hidden');
@@ -241,6 +248,10 @@ async function showDashboard() {
     const gantiLabel = document.getElementById('header-ganti-pin-label');
     if (gantiLabel) gantiLabel.innerText = isUmum ? 'Ganti Sandi' : 'Ganti PIN';
     document.getElementById('user-avatar-text').innerText = activeUser.nama.substring(0, 2).toUpperCase();
+    const hdr = document.querySelector('#dashboard-view > header');
+    if (hdr) hdr.classList.toggle('hidden', isUmum);
+    const ban = document.getElementById('umum-utbk-banner');
+    if (ban) { ban.classList.toggle('hidden', !isUmum); if (isUmum) umumBannerIsi(); }
 
     // Akun Umum: tidak ada absensi, tabungan, pengumuman, maupun panel apa pun.
     // Isinya: Home (ringkasan UTBK), UTBK Corner, Mini Games, dan Profil (lewat navigasi bawah).

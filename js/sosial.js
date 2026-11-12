@@ -3,7 +3,7 @@
 // Semua lewat fungsi database (teman_*, cari_teman, pesan_*). Chat memakai polling
 // (cek pesan baru tiap beberapa detik), bukan Realtime, karena sesi memakai token sendiri.
 // ====================================================================
-const SO = { tab: 'teman', daftar: null, hasil: null, q: '', galat: '', chat: null, timer: null, latar: null, kirim: false };
+const SO = { tab: 'teman', daftar: null, hasil: null, q: '', galat: '', chat: null, profil: null, timer: null, latar: null, kirim: false };
 
 function soRpc(nama, args) {
     return supabaseClient.rpc(nama, args).then(({ data, error }) => {
@@ -37,22 +37,29 @@ function sosialMulaiLatar() {
 function sosialReset() {
     sosialOnLeave();
     if (SO.latar) clearInterval(SO.latar);
-    Object.assign(SO, { tab: 'teman', daftar: null, hasil: null, q: '', galat: '', chat: null, timer: null, latar: null, kirim: false });
+    Object.assign(SO, { tab: 'teman', daftar: null, hasil: null, q: '', galat: '', chat: null, profil: null, timer: null, latar: null, kirim: false });
     sosialBadge();
     const r = document.getElementById('sosial-root'); if (r) r.innerHTML = '';
 }
 function sosialOnLeave() {
     if (SO.timer) { clearInterval(SO.timer); SO.timer = null; }
     document.body.classList.remove('game-berjalan');
-    SO.chat = null;
+    SO.chat = null; SO.profil = null;
+    soBanner(false);
+}
+// Banner UTBK di atas disembunyikan saat chat/profil dibuka supaya layar lebih lega
+function soBanner(sembunyi) {
+    const b = document.getElementById('umum-utbk-banner');
+    if (b) b.classList.toggle('hidden', sembunyi || !isAkunUmum());
 }
 
 // ---------- halaman ----------
 async function openSosialPage() {
     if (!activeUser || !isAkunUmum()) return;
     showDashPage('sosial');
-    SO.chat = null;
+    SO.chat = null; SO.profil = null;
     document.body.classList.remove('game-berjalan');
+    soBanner(false);
     sosialRender();
     await sosialMuatDaftar();
     sosialRender();
@@ -60,6 +67,7 @@ async function openSosialPage() {
     SO.timer = setInterval(async () => {
         if (document.hidden) return;
         if (SO.chat) return sosialAmbilPesan();
+        if (SO.profil) return;
         if (SO.tab === 'cari') return;
         await sosialMuatDaftar();
         if (!SO.chat && SO.tab !== 'cari') sosialRender();
@@ -72,6 +80,7 @@ function sosialRender() {
     const root = document.getElementById('sosial-root');
     if (!root || !activeUser) return;
     if (SO.chat) return sosialRenderChat(root);
+    if (SO.profil) return sosialRenderProfil(root);
     const d = SO.daftar;
     const nMasuk = d ? d.masuk.length : 0;
     const tab = (k, label, extra = '') => `<button type="button" onclick="sosialTab('${k}')" class="flex-1 py-2 rounded-lg text-sm font-bold transition ${SO.tab === k ? 'bg-white text-primary-700 shadow-sm' : 'text-slate-500'}">${label}${extra}</button>`;
@@ -89,19 +98,20 @@ function sosialRender() {
     lucide.createIcons();
 }
 
+function soTokoh(u, kecil) {
+    return `<button type="button" onclick="sosialBukaProfil('${u.id}')" class="flex items-center gap-3 flex-1 min-w-0 text-left" aria-label="Lihat profil ${escapeHtml(u.nama)}">${soAvatar(u.nama, kecil)}<span class="flex-1 min-w-0"><span class="block text-sm font-semibold text-slate-800 truncate">${escapeHtml(u.nama)}</span><span class="block text-xs text-slate-400 truncate">@${escapeHtml(u.username)}</span></span></button>`;
+}
+
 function sosialListTeman(d) {
     if (!d.teman.length) return '<div class="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">Belum ada teman. Buka tab <b>Cari</b> untuk menambahkan lewat username.</div>';
     return `<div class="rounded-2xl border border-slate-100 divide-y divide-slate-100 overflow-hidden">${d.teman.map(t => `
-        <button type="button" onclick="sosialBukaChat('${t.id}')" class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition">
-            ${soAvatar(t.nama)}
-            <span class="flex-1 min-w-0"><span class="block text-sm font-semibold text-slate-800 truncate">${escapeHtml(t.nama)}</span><span class="block text-xs text-slate-400 truncate">@${escapeHtml(t.username)}</span></span>
-            ${Number(t.belum) ? `<span class="text-[11px] font-bold bg-primary-600 text-white rounded-full px-2 py-0.5">${Number(t.belum)}</span>` : '<i data-lucide="message-circle" class="w-5 h-5 text-slate-300"></i>'}
-        </button>`).join('')}</div>`;
+        <div class="flex items-center gap-3 px-4 py-3">${soTokoh(t)}
+            <button type="button" onclick="sosialBukaChat('${t.id}')" class="p-1.5 shrink-0" aria-label="Chat dengan ${escapeHtml(t.nama)}">${Number(t.belum) ? `<span class="text-[11px] font-bold bg-primary-600 text-white rounded-full px-2 py-0.5">${Number(t.belum)}</span>` : '<i data-lucide="message-circle" class="w-5 h-5 text-primary-500"></i>'}</button>
+        </div>`).join('')}</div>`;
 }
 
 function sosialListMasuk(d) {
-    const baris = (u, aksi) => `<div class="flex items-center gap-3 px-4 py-3">${soAvatar(u.nama, true)}
-        <span class="flex-1 min-w-0"><span class="block text-sm font-semibold text-slate-800 truncate">${escapeHtml(u.nama)}</span><span class="block text-xs text-slate-400 truncate">@${escapeHtml(u.username)}</span></span>${aksi}</div>`;
+    const baris = (u, aksi) => `<div class="flex items-center gap-3 px-4 py-3">${soTokoh(u, true)}${aksi}</div>`;
     const masuk = d.masuk.map(u => baris(u, `<button type="button" onclick="sosialBalas('${u.id}', true)" class="text-xs font-bold bg-primary-600 text-white rounded-lg px-3 py-1.5">Terima</button><button type="button" onclick="sosialBalas('${u.id}', false)" class="text-xs font-bold border border-slate-200 text-slate-500 rounded-lg px-3 py-1.5">Tolak</button>`)).join('');
     const keluar = d.keluar.map(u => baris(u, `<button type="button" onclick="sosialHapus('${u.id}')" class="text-xs font-bold border border-slate-200 text-slate-500 rounded-lg px-3 py-1.5">Batalkan</button>`)).join('');
     if (!masuk && !keluar) return '<div class="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">Tidak ada permintaan pertemanan.</div>';
@@ -117,7 +127,7 @@ function sosialFormCari() {
         masuk: `<button type="button" onclick="sosialBalas('${u.id}', true)" class="text-xs font-bold bg-primary-600 text-white rounded-lg px-3 py-1.5">Terima</button>`,
         teman: '<span class="text-xs font-semibold text-emerald-600">Teman</span>'
     })[u.hubungan] || '';
-    const list = h === null ? '' : (h.length ? `<div class="rounded-2xl border border-slate-100 divide-y divide-slate-100">${h.map(u => `<div class="flex items-center gap-3 px-4 py-3">${soAvatar(u.nama, true)}<span class="flex-1 min-w-0"><span class="block text-sm font-semibold text-slate-800 truncate">${escapeHtml(u.nama)}</span><span class="block text-xs text-slate-400 truncate">@${escapeHtml(u.username)}</span></span>${tombol(u)}</div>`).join('')}</div>` : '<p class="text-sm text-slate-400 text-center py-4">Tidak ada akun dengan username itu.</p>');
+    const list = h === null ? '' : (h.length ? `<div class="rounded-2xl border border-slate-100 divide-y divide-slate-100">${h.map(u => `<div class="flex items-center gap-3 px-4 py-3">${soTokoh(u, true)}${tombol(u)}</div>`).join('')}</div>` : '<p class="text-sm text-slate-400 text-center py-4">Tidak ada akun dengan username itu.</p>');
     return `<form onsubmit="sosialCari(event)" class="flex gap-2">
         <input type="text" id="so-q" maxlength="21" autocapitalize="none" spellcheck="false" placeholder="Cari username (min. 3 huruf)" value="${escapeHtml(SO.q)}" class="flex-1 bg-slate-50 border border-slate-200 py-2.5 px-3.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
         <button type="submit" class="px-4 rounded-xl bg-primary-600 text-white font-semibold text-sm">Cari</button></form>${list}`;
@@ -145,12 +155,14 @@ function sosialBukaChat(id) {
     if (!t) return;
     SO.chat = { id, nama: t.nama, username: t.username, pesan: [], last: 0 };
     document.body.classList.add('game-berjalan');   // sembunyikan navigasi bawah selama chat
+    soBanner(true);
     sosialRender();
     sosialAmbilPesan(true);
 }
 function sosialTutupChat() {
     SO.chat = null;
     document.body.classList.remove('game-berjalan');
+    soBanner(false);
     sosialMuatDaftar().then(sosialRender);
     sosialRender();
 }
@@ -176,8 +188,7 @@ function sosialRenderChat(root) {
     root.innerHTML = `<div class="flex flex-col max-w-md mx-auto bg-white rounded-2xl border border-slate-100 overflow-hidden" style="height:calc(100dvh - 9rem)">
         <div class="flex items-center gap-3 px-3 py-2.5 border-b border-slate-100">
             <button type="button" onclick="sosialTutupChat()" class="p-1.5 text-slate-500" aria-label="Kembali"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-            ${soAvatar(c.nama, true)}
-            <span class="flex-1 min-w-0"><span class="block text-sm font-bold text-slate-800 truncate">${escapeHtml(c.nama)}</span><span class="block text-xs text-slate-400 truncate">@${escapeHtml(c.username)}</span></span>
+            <button type="button" onclick="sosialBukaProfil('${c.id}')" class="flex items-center gap-3 flex-1 min-w-0 text-left">${soAvatar(c.nama, true)}<span class="flex-1 min-w-0"><span class="block text-sm font-bold text-slate-800 truncate">${escapeHtml(c.nama)}</span><span class="block text-xs text-slate-400 truncate">@${escapeHtml(c.username)} · lihat profil</span></span></button>
             <button type="button" onclick="sosialLepas('${c.id}')" class="p-1.5 text-slate-400 hover:text-rose-600" aria-label="Hapus teman"><i data-lucide="user-minus" class="w-5 h-5"></i></button>
         </div>
         <div id="so-msgs" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
@@ -205,4 +216,78 @@ async function sosialLepas(id) {
     if (!confirm('Hapus teman ini? Riwayat chat kalian juga akan dihapus.')) return;
     try { await soRpc('teman_hapus', { p_id: id }); } catch (e) { return; }
     sosialTutupChat();
+}
+
+// ---------- profil orang lain ----------
+async function sosialBukaProfil(id) {
+    SO.chat = null;   // jika dibuka dari chat, hentikan chat
+    document.body.classList.remove('game-berjalan');
+    soBanner(true);
+    SO.profil = { id, memuat: true };
+    sosialRender();
+    window.scrollTo({ top: 0 });
+    try {
+        const d = await soRpc('profil_umum', { p_id: id });
+        if (!SO.profil || SO.profil.id !== id) return;
+        SO.profil = d;
+    } catch (e) {
+        console.error('Gagal memuat profil:', e);
+        if (SO.profil && SO.profil.id === id) SO.profil = { id, galat: e.kode === 'tidak_ditemukan' ? 'Akun tidak ditemukan.' : 'Profil belum bisa dimuat. Coba lagi.' };
+    }
+    sosialRender();
+}
+function sosialTutupProfil() { SO.profil = null; soBanner(false); sosialMuatDaftar().then(sosialRender); sosialRender(); }
+
+async function sosialProfilAksi(jenis) {
+    const id = SO.profil && SO.profil.id; if (!id) return;
+    try {
+        if (jenis === 'kirim') await soRpc('teman_kirim', { p_id: id });
+        else if (jenis === 'terima') await soRpc('teman_balas', { p_id: id, p_terima: true });
+        else if (jenis === 'batal') await soRpc('teman_hapus', { p_id: id });
+        else if (jenis === 'chat') { await sosialMuatDaftar(); SO.profil = null; return sosialBukaChat(id); }
+    } catch (e) { if (typeof utbkToast === 'function') utbkToast(SO_PESAN[e.kode] || 'Gagal. Coba lagi.'); }
+    await sosialMuatDaftar();
+    sosialBukaProfil(id);
+}
+
+function sosialRenderProfil(root) {
+    const p = SO.profil;
+    const balik = `<button type="button" onclick="sosialTutupProfil()" class="flex items-center gap-1.5 text-sm font-semibold text-primary-700 self-start"><i data-lucide="arrow-left" class="w-4 h-4"></i> Kembali</button>`;
+    if (p.memuat || p.galat) {
+        root.innerHTML = `<div class="flex flex-col gap-4 max-w-md mx-auto">${balik}${p.galat ? `<p class="text-sm text-rose-600">${escapeHtml(p.galat)}</p>` : '<p class="text-sm text-slate-400 flex items-center gap-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Memuat profil...</p>'}</div>`;
+        return lucide.createIcons();
+    }
+    const poin = Number(p.poin_seumur) || 0, lv = mgLevel(poin);
+    const gabung = p.bergabung ? fmtTgl(new Date(p.bergabung), { month: 'long', year: 'numeric' }) : '';
+    const tile = (l, v) => `<div class="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-center"><p class="text-[11px] text-slate-500">${l}</p><p class="text-lg font-bold text-slate-800 mt-0.5 tabular-nums">${v}</p></div>`;
+    const baris = (ikon, l, v) => `<div class="flex items-start gap-3"><span class="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0"><i data-lucide="${ikon}" class="w-4.5 h-4.5"></i></span><div class="min-w-0"><p class="text-xs text-slate-400">${l}</p><p class="text-sm font-semibold ${v ? 'text-slate-800' : 'text-slate-300'} break-words">${v ? escapeHtml(v) : 'Belum diisi'}</p></div></div>`;
+    const aksi = ({
+        none: `<button type="button" onclick="sosialProfilAksi('kirim')" class="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm transition flex items-center justify-center gap-2"><i data-lucide="user-plus" class="w-4 h-4"></i> Tambah teman</button>`,
+        terkirim: `<button type="button" onclick="sosialProfilAksi('batal')" class="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm">Permintaan terkirim · Batalkan</button>`,
+        masuk: `<button type="button" onclick="sosialProfilAksi('terima')" class="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm transition">Terima permintaan pertemanan</button>`,
+        teman: `<button type="button" onclick="sosialProfilAksi('chat')" class="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm transition flex items-center justify-center gap-2"><i data-lucide="message-circle" class="w-4 h-4"></i> Kirim pesan</button>`
+    })[p.hubungan] || '';
+    let detail;
+    if (p.terbuka) {
+        const hari = typeof utbkHariMenujuUjian === 'function' ? utbkHariMenujuUjian() : 0;
+        detail = `<div class="rounded-2xl border border-slate-100 p-4 space-y-3.5"><h4 class="font-bold text-slate-800">Data diri</h4>
+                ${baris('school', 'Asal sekolah', p.asal_sekolah)}${baris('building-2', 'Universitas tujuan', p.universitas_tujuan)}${baris('book-open', 'Jurusan tujuan', p.jurusan_tujuan)}</div>
+            <div class="rounded-2xl border border-slate-100 p-4"><h4 class="font-bold text-slate-800 mb-3">Progres UTBK</h4>
+                <div class="grid grid-cols-3 gap-3">${tile('Try out', Number(p.jumlah_tryout) || 0)}${tile('Rata-rata terakhir', p.rata_terakhir !== null && p.rata_terakhir !== undefined ? Math.round(Number(p.rata_terakhir)) : '-')}${tile('Menuju UTBK', hari > 0 ? hari + ' hr' : '-')}</div>
+                ${p.target && (p.target.ptn || p.target.prodi) ? `<p class="text-xs text-slate-500 mt-3">Target utama: <b class="text-slate-700">${escapeHtml([p.target.prodi, p.target.ptn].filter(Boolean).join(' - '))}</b></p>` : ''}</div>`;
+    } else {
+        detail = `<div class="rounded-2xl border border-dashed border-slate-200 p-5 text-center text-sm text-slate-400"><i data-lucide="lock" class="w-5 h-5 mx-auto mb-1.5"></i>Berteman dulu untuk melihat data diri dan progres UTBK-nya.</div>`;
+    }
+    root.innerHTML = `<div class="flex flex-col gap-4 max-w-md mx-auto">${balik}
+        <div class="flex flex-col items-center text-center">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-primary-400 to-primary-700 text-white flex items-center justify-center text-2xl font-extrabold shadow-lg ring-4 ring-white">${soInisial(p.nama)}</div>
+            <h4 class="mt-3 text-xl font-bold text-slate-800">${escapeHtml(p.nama)}</h4>
+            <p class="text-sm text-slate-400">@${escapeHtml(p.username)}</p>
+            <div class="mt-2 flex flex-wrap items-center justify-center gap-2"><span class="text-xs font-semibold bg-primary-50 text-primary-700 px-2.5 py-1 rounded-full">${escapeHtml(lv.nama)}</span>${gabung ? `<span class="text-xs font-semibold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">Bergabung ${escapeHtml(gabung)}</span>` : ''}</div>
+        </div>
+        ${aksi}
+        <div class="rounded-2xl border border-slate-100 p-4"><h4 class="font-bold text-slate-800 mb-3">Mini Games</h4>
+            <div class="grid grid-cols-3 gap-3">${tile('Level', escapeHtml(lv.nama))}${tile('Total poin', mgFmtAngka(poin))}${tile('Akurasi', p.akurasi !== null && p.akurasi !== undefined ? p.akurasi + '%' : '-')}</div></div>
+        ${detail}</div>`;
+    lucide.createIcons();
 }
