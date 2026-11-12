@@ -170,6 +170,7 @@ async function handleLogout() {
     if (typeof resetMiniGamesState === 'function') resetMiniGamesState();
     if (typeof resetPeringkatState === 'function') resetPeringkatState();
     if (typeof profilReset === 'function') profilReset();
+    if (typeof sosialReset === 'function') sosialReset();
     if (typeof navSembunyikan === 'function') navSembunyikan();
 
     document.getElementById('login-card').classList.remove('hidden');

@@ -613,6 +613,11 @@
                 </section>
             </div>
 
+            <!-- ===== HALAMAN: SOSIAL (teman & chat, akun Umum) ===== -->
+            <div id="page-sosial" class="hidden flex flex-col gap-4">
+                <section class="w-full"><div id="sosial-root"></div></section>
+            </div>
+
             <!-- ===== HALAMAN: PROFIL ===== -->
             <div id="page-profil" class="hidden flex flex-col gap-4">
                 <section class="w-full">
@@ -1208,6 +1213,9 @@
             <button type="button" id="nav-peringkat" class="bnav-item" onclick="navKe('peringkat')" aria-current="false" hidden>
                 <span class="bnav-ikon"><i data-lucide="trophy"></i></span><span class="bnav-label">Peringkat</span>
             </button>
+            <button type="button" id="nav-sosial" class="bnav-item" onclick="navKe('sosial')" aria-current="false" hidden>
+                <span class="bnav-ikon relative"><i data-lucide="users"></i><span id="nav-sosial-badge" class="hidden absolute -top-1 -right-1.5 min-w-[1rem] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold leading-4 text-center"></span></span><span class="bnav-label">Sosial</span>
+            </button>
             <button type="button" id="nav-profil" class="bnav-item" onclick="navKe('profil')" aria-current="false">
                 <span class="bnav-ikon"><i data-lucide="user-round"></i></span><span class="bnav-label">Profil</span>
             </button>
@@ -1305,6 +1313,7 @@
     <script src="js/sinonim-data.js"></script>
     <script src="js/sinonim.js"></script>
     <script src="js/akun.js"></script>
+    <script src="js/sosial.js"></script>
     <script src="js/profil.js"></script>
     <script src="js/nav.js"></script>
     <script src="js/auth.js"></script>

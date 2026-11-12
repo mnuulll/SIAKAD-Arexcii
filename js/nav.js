@@ -9,13 +9,13 @@
 //   - Tombol yang aktif ditandai lingkaran yang terangkat (lihat css/style.css).
 //   - Bar disembunyikan otomatis saat game sedang berjalan.
 // ====================================================================
-const NAV_TAB = ['home', 'fitur', 'utbk', 'minigames', 'peringkat', 'profil'];
+const NAV_TAB = ['home', 'fitur', 'utbk', 'minigames', 'peringkat', 'sosial', 'profil'];
 // Halaman -> tab yang disorot
 const NAV_HALAMAN = {
     home: 'home', homeumum: 'home', fitur: 'fitur', info: 'home', log: 'home', role: 'home',
     utbk: 'utbk',
     minigames: 'minigames', matdas: 'minigames', inggris: 'minigames', sinonim: 'minigames',
-    peringkat: 'peringkat',
+    peringkat: 'peringkat', sosial: 'sosial',
     profil: 'profil'
 };
 
@@ -31,10 +31,13 @@ function setupBottomNav() {
     const utbk = document.getElementById('nav-utbk');
     const games = document.getElementById('nav-minigames');
     const peringkat = document.getElementById('nav-peringkat');
+    const sosial = document.getElementById('nav-sosial');
 
     if (home) home.hidden = false;
     if (utbk) utbk.hidden = !adaUtbk;
     if (games) games.hidden = !adaGames;
+    if (sosial) sosial.hidden = !umum;   // Sosial hanya untuk akun Umum
+    if (umum && typeof sosialMulaiLatar === 'function') sosialMulaiLatar();
     if (peringkat) peringkat.hidden = !adaGames;   // sama seperti Mini Games: tidak untuk Wali Kelas
 
     if (tombolFitur) {
@@ -89,5 +92,6 @@ function navKe(tab) {
     else if (tab === 'utbk') openUtbkPage();
     else if (tab === 'minigames') openMiniGames();
     else if (tab === 'peringkat') openPeringkatPage();
+    else if (tab === 'sosial') openSosialPage();
     else if (tab === 'profil') openProfilPage();
 }
