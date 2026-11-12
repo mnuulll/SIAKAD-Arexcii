@@ -7,7 +7,7 @@
 //   dan tabungan selalu diambil langsung dari server dan tidak masuk cache.
 // Naikkan CACHE_VERSION setiap kali ingin memaksa semua perangkat membuang cache lama.
 // ====================================================================
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v12';
 const SHELL_CACHE = 'siakad-shell-' + CACHE_VERSION;
 const CDN_CACHE = 'siakad-cdn-' + CACHE_VERSION;
 
@@ -29,6 +29,7 @@ const SHELL_FILES = [
   'js/inggris.js',
   'js/sinonim-data.js',
   'js/sinonim.js',
+  'js/akun.js',
   'js/profil.js',
   'js/nav.js',
   'js/pwa.js',

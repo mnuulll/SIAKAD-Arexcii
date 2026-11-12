@@ -10,4 +10,4 @@ const SUPABASE_URL = "https://mzzcdsekhzfykcrpqzrg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16emNkc2VraHpmeWtjcnBxenJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxOTg5MjcsImV4cCI6MjA5OTc3NDkyN30.ThVQwvj0Tu4EwMrD5iEcqsoO3e8j9SXAthZFhfkSFf0";
 
 // Nomor versi aplikasi (tampil di halaman Profil, berguna saat melaporkan masalah)
-const APP_VERSI = '2026.11.10a';
+const APP_VERSI = '2026.11.12a';

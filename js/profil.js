@@ -13,6 +13,7 @@ const PROFIL_BIDANG = [
 const profilExtra = { dimuat: false, absen: null, tabungan: null };
 
 function profilReset() {
+    if (typeof akunReset === 'function') akunReset();
     Object.assign(profilExtra, { dimuat: false, absen: null, tabungan: null });
     Object.assign(profilData, { dimuat: false, galatMuat: false, nilai: { asal_sekolah: '', universitas_tujuan: '', jurusan_tujuan: '' }, mengedit: false, menyimpan: false, draft: null, galat: '' });
     const root = document.getElementById('profil-root');
@@ -67,6 +68,7 @@ async function openProfilPage() {
     const tugas = [];
     if (activeUser.role !== 'wali_kelas') {
         tugas.push(profilMuat());
+        if (isAkunUmum() && typeof akunMuat === 'function') tugas.push(akunMuat());
         if (typeof mgMuatRingkas === 'function') tugas.push(mgMuatRingkas());
         if (!isAkunUmum()) tugas.push(profilMuatExtra());
         if (typeof utbkIsEligible === 'function' && utbkIsEligible() && !utbkState.loaded) tugas.push(utbkLoadData());
@@ -304,6 +306,7 @@ function profilRender() {
                 ${kelas ? `<span class="text-xs font-semibold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">${escapeHtml(kelas)}</span>` : ''}
             </div>
         </div>
+        ${umum && typeof akunKartu === 'function' ? akunKartu() : ''}
         ${wali ? '' : profilKartuData()}
         ${profilKartuAkun()}
         ${profilKartuKehadiran()}
